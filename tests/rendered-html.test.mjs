@@ -20,8 +20,27 @@ test("defines the complete Mathora Studio workspace", async () => {
   assert.match(studio, /Thư viện câu hỏi/);
   assert.match(studio, /Tạo đề theo ma trận/);
   assert.match(studio, /Hình dung bài toán thực tế/);
+  assert.match(studio, /Đưa vào thư viện/);
+  assert.match(studio, /LaTeX công thức/);
   assert.match(studio, /Xoay vòng theo sức khỏe/);
   assert.doesNotMatch(studio, /codex-preview|Your site is taking shape/i);
+});
+
+test("requires human review before questions can enter exams", async () => {
+  const [reviewRoute, processRoute, examRoute] = await Promise.all([
+    readFile(new URL("../app/api/review/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/exams/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(processRoute, /INSERT INTO image_regions/);
+  assert.match(processRoute, /AWAITING_REVIEW/);
+  assert.match(reviewRoute, /confirmedQuestionIds/);
+  assert.match(reviewRoute, /confirmedRegionIds/);
+  assert.match(reviewRoute, /status = 'REVIEWED'/);
+  assert.match(reviewRoute, /status = 'COMPLETED'/);
+  assert.match(examRoute, /status = 'REVIEWED'/);
+  assert.doesNotMatch(examRoute, /AWAITING_REVIEW/);
 });
 
 test("removes starter preview and declares persistent bindings", async () => {

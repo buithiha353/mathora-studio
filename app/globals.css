@@ -540,7 +540,7 @@ textarea:focus-visible {
 
 .review-layout {
   display: grid;
-  grid-template-columns: minmax(580px, 1fr) 322px;
+  grid-template-columns: minmax(580px, 1fr) 390px;
   height: calc(100vh - 131px);
   min-height: 650px;
 }
@@ -931,6 +931,63 @@ textarea:focus-visible {
   font-size: 15px;
 }
 
+.review-panel-section {
+  min-width: 0;
+}
+
+.review-progress {
+  padding: 5px 8px;
+  color: #397b62;
+  font-size: 9px;
+  font-weight: 800;
+  background: var(--mint);
+  border-radius: 12px;
+}
+
+.region-selector,
+.question-review-list {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.region-selector button,
+.question-review-list button {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  place-items: center;
+}
+
+.region-selector button.is-active,
+.question-review-list button.is-active {
+  color: var(--forest);
+  background: var(--lime);
+  border-color: #b8cf58;
+}
+
+.region-selector button.is-confirmed,
+.question-review-list button.is-confirmed {
+  color: #2e7058;
+  background: var(--mint);
+  border-color: #a7d9c6;
+}
+
+.region-selector button.is-active.is-confirmed,
+.question-review-list button.is-active.is-confirmed {
+  box-shadow: 0 0 0 2px rgba(57, 123, 98, 0.18);
+}
+
 .mini-menu {
   display: grid;
   width: 30px;
@@ -1108,6 +1165,54 @@ textarea:focus-visible {
   padding: 11px;
   line-height: 1.55;
   resize: vertical;
+}
+
+.field-group textarea.question-content-editor {
+  min-height: 104px;
+}
+
+.field-group textarea.formula-editor {
+  min-height: 64px;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9.5px;
+}
+
+.formula-review-preview {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-height: 42px;
+  margin: -4px 0 13px;
+  padding: 8px 10px;
+  color: #397b62;
+  background: #f4f8f6;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.formula-review-preview code {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: Cambria, "Cambria Math", serif;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-confidence {
+  margin: 10px 0 13px;
+  padding: 7px 9px;
+  background: var(--canvas);
+  border-radius: 8px;
+}
+
+.review-fields {
+  gap: 8px;
+}
+
+.rotate-back {
+  transform: rotate(180deg);
 }
 
 .field-group input:focus,

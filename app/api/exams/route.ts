@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         `SELECT id, code, content, latex, topic, difficulty, answer,
                 asset_count AS assetCount
          FROM questions
-         WHERE grade = ? AND status IN ('REVIEWED', 'AWAITING_REVIEW')
+         WHERE grade = ? AND status = 'REVIEWED'
          ORDER BY created_at DESC`,
       )
       .bind(grade)

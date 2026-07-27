@@ -15,6 +15,13 @@
       "when": 1785167536517,
       "tag": "0001_stale_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785192512066,
+      "tag": "0002_worried_bastion",
+      "breakpoints": true
     }
   ]
 }

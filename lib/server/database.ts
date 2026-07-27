@@ -29,6 +29,18 @@ const schemaStatements = [
     status TEXT NOT NULL DEFAULT 'REVIEWED',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS image_regions (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL,
+    question_id TEXT,
+    question_code TEXT NOT NULL,
+    label TEXT NOT NULL,
+    region_type TEXT NOT NULL DEFAULT 'geometry',
+    box_json TEXT NOT NULL,
+    confidence INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'AWAITING_REVIEW',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     label TEXT NOT NULL,
@@ -76,6 +88,7 @@ const schemaStatements = [
   )`,
   "CREATE INDEX IF NOT EXISTS questions_topic_idx ON questions(topic)",
   "CREATE INDEX IF NOT EXISTS questions_difficulty_idx ON questions(difficulty)",
+  "CREATE INDEX IF NOT EXISTS image_regions_document_idx ON image_regions(document_id, status)",
   "CREATE INDEX IF NOT EXISTS api_keys_status_idx ON api_keys(status, priority)",
   "CREATE INDEX IF NOT EXISTS documents_status_idx ON documents(status)",
 ];

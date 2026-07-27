@@ -24,7 +24,6 @@ import {
   LibraryBig,
   LockKeyhole,
   Maximize2,
-  MoreHorizontal,
   PencilRuler,
   Plus,
   RefreshCcw,
@@ -63,6 +62,7 @@ type View =
   | "illustration"
   | "settings";
 type Difficulty = "BIET" | "HIEU" | "VAN_DUNG" | "VAN_DUNG_CAO";
+type WorkflowStage = "EMPTY" | "UPLOADED" | "REVIEW" | "COMPLETED";
 
 type Question = {
   id?: string;
@@ -83,7 +83,10 @@ type Region = {
   label: string;
   box: number[];
   questionCode: string;
+  questionId?: string | null;
+  regionType?: "geometry" | "chart" | "table" | "formula";
   confidence: number;
+  status?: string;
 };
 
 type OcrResult = {
@@ -146,12 +149,12 @@ const difficultyMeta: Record<
   },
 };
 
-const steps = [
-  { label: "Tải lên", status: "done" },
-  { label: "Nhận diện", status: "done" },
-  { label: "Duyệt vùng", status: "active" },
-  { label: "Kiểm tra nội dung", status: "upcoming" },
-  { label: "Thư viện", status: "upcoming" },
+const stepLabels = [
+  "Tải lên",
+  "Nhận diện",
+  "Duyệt vùng",
+  "Kiểm tra nội dung",
+  "Thư viện",
 ];
 
 const initialOverview = {
@@ -441,41 +444,149 @@ function ReviewWorkspace({
   selectedFile,
   selectedPreview,
   documentId,
+  workflowStage,
   onFileChange,
   isUploading,
   isProcessing,
+  isSaving,
   onProcess,
+  onResultChange,
+  onSaveReview,
   processingMode,
 }: {
   result: OcrResult;
   selectedFile: File | null;
   selectedPreview: string | null;
   documentId: string | null;
+  workflowStage: WorkflowStage;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   isUploading: boolean;
   isProcessing: boolean;
+  isSaving: boolean;
   onProcess: () => void;
+  onResultChange: (result: OcrResult) => void;
+  onSaveReview: (
+    confirmedQuestionIds: string[],
+    confirmedRegionIds: string[],
+  ) => Promise<void>;
   processingMode: string | null;
 }) {
   const [selectedRegion, setSelectedRegion] = useState(
     result.imageRegions[0]?.id ?? "",
   );
-  const [confirmed, setConfirmed] = useState<string[]>([]);
+  const [confirmedRegions, setConfirmedRegions] = useState<string[]>([]);
+  const [confirmedQuestions, setConfirmedQuestions] = useState<string[]>([]);
+  const [activePanel, setActivePanel] = useState<"regions" | "questions">(
+    "regions",
+  );
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const region =
     result.imageRegions.find((item) => item.id === selectedRegion) ??
     result.imageRegions[0];
+  const question =
+    result.questions[
+      Math.min(selectedQuestionIndex, Math.max(0, result.questions.length - 1))
+    ];
+  const questionId = question?.id ?? question?.code ?? "";
+  const allRegionsConfirmed = result.imageRegions.every((item) =>
+    confirmedRegions.includes(item.id),
+  );
+  const allQuestionsConfirmed = result.questions.every((item) =>
+    confirmedQuestions.includes(item.id ?? item.code),
+  );
+  const isBusy = isUploading || isProcessing || isSaving;
 
   function confirmRegion() {
     if (!region) return;
-    setConfirmed((current) =>
+    setConfirmedRegions((current) =>
       current.includes(region.id) ? current : [...current, region.id],
     );
     const currentIndex = result.imageRegions.findIndex(
       (item) => item.id === region.id,
     );
     const next = result.imageRegions[currentIndex + 1];
-    if (next) setSelectedRegion(next.id);
+    if (next) {
+      setSelectedRegion(next.id);
+    } else {
+      setActivePanel("questions");
+    }
+  }
+
+  function confirmQuestion() {
+    if (!questionId) return;
+    setConfirmedQuestions((current) =>
+      current.includes(questionId) ? current : [...current, questionId],
+    );
+    if (selectedQuestionIndex < result.questions.length - 1) {
+      setSelectedQuestionIndex((current) => current + 1);
+    }
+  }
+
+  function updateRegion(patch: Partial<Region>) {
+    if (!region) return;
+    onResultChange({
+      ...result,
+      imageRegions: result.imageRegions.map((item) =>
+        item.id === region.id ? { ...item, ...patch } : item,
+      ),
+    });
+    setConfirmedRegions((current) =>
+      current.filter((item) => item !== region.id),
+    );
+  }
+
+  function updateQuestion(patch: Partial<Question>) {
+    if (!question) return;
+    const nextQuestion = { ...question, ...patch };
+    onResultChange({
+      ...result,
+      questions: result.questions.map((item, index) =>
+        index === selectedQuestionIndex ? nextQuestion : item,
+      ),
+      imageRegions:
+        patch.code && question.id
+          ? result.imageRegions.map((item) =>
+              item.questionId === question.id
+                ? { ...item, questionCode: patch.code ?? item.questionCode }
+                : item,
+            )
+          : result.imageRegions,
+    });
+    setConfirmedQuestions((current) =>
+      current.filter((item) => item !== questionId),
+    );
+  }
+
+  function stepStatus(index: number) {
+    if (workflowStage === "COMPLETED") return "done";
+    if (workflowStage === "EMPTY") return index === 0 ? "active" : "upcoming";
+    if (workflowStage === "UPLOADED") {
+      return index < 1 ? "done" : index === 1 ? "active" : "upcoming";
+    }
+    const activeIndex = activePanel === "regions" ? 2 : 3;
+    return index < activeIndex ? "done" : index === activeIndex ? "active" : "upcoming";
+  }
+
+  function handlePrimaryAction() {
+    if (!documentId) {
+      fileInput.current?.click();
+      return;
+    }
+    if (workflowStage === "UPLOADED") {
+      onProcess();
+      return;
+    }
+    if (activePanel === "regions") {
+      if (allRegionsConfirmed) setActivePanel("questions");
+      else confirmRegion();
+      return;
+    }
+    if (allQuestionsConfirmed) {
+      void onSaveReview(confirmedQuestions, confirmedRegions);
+    } else {
+      confirmQuestion();
+    }
   }
 
   return (
@@ -495,13 +606,16 @@ function ReviewWorkspace({
 
       <div className="process-strip">
         <div className="stepper">
-          {steps.map((step, index) => (
-            <div className={`step step-${step.status}`} key={step.label}>
-              <span>{step.status === "done" ? <Check size={12} /> : index + 1}</span>
-              <strong>{step.label}</strong>
-              {index < steps.length - 1 ? <i /> : null}
+          {stepLabels.map((label, index) => {
+            const status = stepStatus(index);
+            return (
+            <div className={`step step-${status}`} key={label}>
+              <span>{status === "done" ? <Check size={12} /> : index + 1}</span>
+              <strong>{label}</strong>
+              {index < stepLabels.length - 1 ? <i /> : null}
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className="process-meta">
           <span className={`mode-pill ${processingMode === "gemini" ? "live" : ""}`}>
@@ -540,7 +654,7 @@ function ReviewWorkspace({
           <DocumentPaper
             result={result}
             selectedRegion={region?.id ?? ""}
-            confirmed={confirmed}
+            confirmed={confirmedRegions}
             onSelectRegion={setSelectedRegion}
             preview={selectedPreview}
             previewType={selectedFile?.type ?? null}
@@ -564,121 +678,349 @@ function ReviewWorkspace({
 
         <aside className="review-panel">
           <div className="panel-tabs">
-            <button type="button" className="is-active">
+            <button
+              type="button"
+              className={activePanel === "regions" ? "is-active" : ""}
+              onClick={() => setActivePanel("regions")}
+            >
               <ImageIcon size={15} />
               Vùng hình
-              <span>{result.imageRegions.length}</span>
+              <span>
+                {confirmedRegions.length}/{result.imageRegions.length}
+              </span>
             </button>
-            <button type="button">
+            <button
+              type="button"
+              className={activePanel === "questions" ? "is-active" : ""}
+              onClick={() => setActivePanel("questions")}
+            >
               <Sigma size={15} />
-              Công thức
-              <span>{result.questions.length + 2}</span>
+              Câu hỏi
+              <span>
+                {confirmedQuestions.length}/{result.questions.length}
+              </span>
             </button>
           </div>
 
           <div className="panel-scroll">
-            <div className="selected-block-heading">
-              <div>
-                <p>Vùng đang chọn</p>
-                <h3>{region?.questionCode ?? "Chưa có vùng"}</h3>
-              </div>
-              <button type="button" className="mini-menu" aria-label="Thao tác khác">
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-
-            {region ? (
-              <>
-                <div className="region-preview">
-                  <div className="mini-circle">
-                    <i className="mini-circle-shape" />
-                    <i className="mini-tangent mini-tangent-one" />
-                    <i className="mini-tangent mini-tangent-two" />
-                    <b>A</b>
-                    <span>O</span>
-                    <em>B</em>
-                    <small>C</small>
-                  </div>
-                  <span className="crop-label">Ảnh crop gốc · PNG</span>
-                </div>
-
-                <div className="confidence-row">
+            {activePanel === "regions" ? (
+              <div className="review-panel-section">
+                <div className="selected-block-heading">
                   <div>
-                    <span>Độ tin cậy khoanh vùng</span>
-                    <strong>{Math.round(region.confidence * 100)}%</strong>
+                    <p>Vùng đang chọn</p>
+                    <h3>{region?.questionCode ?? "Chưa có vùng"}</h3>
                   </div>
-                  <div className="confidence-bar">
-                    <i style={{ width: `${region.confidence * 100}%` }} />
-                  </div>
+                  <span className="review-progress">
+                    {confirmedRegions.length}/{result.imageRegions.length}
+                  </span>
                 </div>
 
-                <div className="field-group">
-                  <label htmlFor="region-type">Loại nội dung</label>
-                  <select id="region-type" defaultValue="geometry">
-                    <option value="geometry">Hình học / Sơ đồ</option>
-                    <option value="chart">Đồ thị / Biểu đồ</option>
-                    <option value="table">Bảng dữ liệu</option>
-                    <option value="formula">Công thức dạng ảnh</option>
-                  </select>
-                </div>
+                {region ? (
+                  <>
+                    <div className="region-selector" aria-label="Danh sách vùng ảnh">
+                      {result.imageRegions.map((item, index) => (
+                        <button
+                          type="button"
+                          key={item.id}
+                          className={`${item.id === region.id ? "is-active" : ""} ${
+                            confirmedRegions.includes(item.id) ? "is-confirmed" : ""
+                          }`}
+                          onClick={() => setSelectedRegion(item.id)}
+                        >
+                          {confirmedRegions.includes(item.id) ? (
+                            <Check size={12} />
+                          ) : (
+                            index + 1
+                          )}
+                        </button>
+                      ))}
+                    </div>
 
-                <div className="field-group">
-                  <label htmlFor="question-link">Gắn vào câu hỏi</label>
-                  <select
-                    id="question-link"
-                    value={region.questionCode}
-                    onChange={() => undefined}
-                    aria-readonly="true"
-                  >
-                    <option>{region.questionCode}</option>
-                  </select>
+                    <div className="region-preview">
+                      <div className="mini-circle">
+                        <i className="mini-circle-shape" />
+                        <i className="mini-tangent mini-tangent-one" />
+                        <i className="mini-tangent mini-tangent-two" />
+                        <b>A</b>
+                        <span>O</span>
+                        <em>B</em>
+                        <small>C</small>
+                      </div>
+                      <span className="crop-label">Ảnh crop gốc · PNG</span>
+                    </div>
+
+                    <div className="confidence-row">
+                      <div>
+                        <span>Độ tin cậy khoanh vùng</span>
+                        <strong>{Math.round(region.confidence * 100)}%</strong>
+                      </div>
+                      <div className="confidence-bar">
+                        <i style={{ width: `${region.confidence * 100}%` }} />
+                      </div>
+                    </div>
+
+                    <label className="field-group">
+                      <span>Nhãn vùng</span>
+                      <input
+                        value={region.label}
+                        onChange={(event) =>
+                          updateRegion({ label: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <label className="field-group">
+                      <span>Loại nội dung</span>
+                      <select
+                        value={region.regionType ?? "geometry"}
+                        onChange={(event) =>
+                          updateRegion({
+                            regionType: event.target.value as Region["regionType"],
+                          })
+                        }
+                      >
+                        <option value="geometry">Hình học / Sơ đồ</option>
+                        <option value="chart">Đồ thị / Biểu đồ</option>
+                        <option value="table">Bảng dữ liệu</option>
+                        <option value="formula">Công thức dạng ảnh</option>
+                      </select>
+                    </label>
+
+                    <label className="field-group">
+                      <span>Gắn vào câu hỏi</span>
+                      <select
+                        value={
+                          region.questionId ??
+                          result.questions.find(
+                            (item) => item.code === region.questionCode,
+                          )?.id ??
+                          ""
+                        }
+                        onChange={(event) => {
+                          const linked = result.questions.find(
+                            (item) => item.id === event.target.value,
+                          );
+                          updateRegion({
+                            questionId: linked?.id ?? null,
+                            questionCode: linked?.code ?? region.questionCode,
+                          });
+                        }}
+                      >
+                        <option value="">Chưa gắn</option>
+                        {result.questions.map((item) => (
+                          <option key={item.id ?? item.code} value={item.id}>
+                            {item.code}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                ) : (
+                  <div className="empty-state">Không có vùng ảnh cần duyệt.</div>
+                )}
+
+                <div className="review-checklist">
+                  <p>Kiểm tra nhanh</p>
+                  <div>
+                    <CircleCheck size={16} />
+                    <span>
+                      Không cắt mất nhãn
+                      <small>Đủ khoảng đệm quanh hình</small>
+                    </span>
+                  </div>
+                  <div>
+                    <CircleCheck size={16} />
+                    <span>
+                      Đúng câu hỏi
+                      <small>Ảnh sẽ đi cùng câu khi xuất đề</small>
+                    </span>
+                  </div>
+                  <div>
+                    <CircleCheck size={16} />
+                    <span>
+                      Giữ bản nguồn
+                      <small>Tọa độ vùng được lưu riêng</small>
+                    </span>
+                  </div>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="empty-state">Chưa phát hiện vùng hình ảnh.</div>
-            )}
+              <div className="review-panel-section">
+                <div className="selected-block-heading">
+                  <div>
+                    <p>Kiểm tra nội dung</p>
+                    <h3>{question?.code ?? "Chưa có câu hỏi"}</h3>
+                  </div>
+                  <span className="review-progress">
+                    {confirmedQuestions.length}/{result.questions.length}
+                  </span>
+                </div>
 
-            <div className="review-checklist">
-              <p>Kiểm tra nhanh</p>
-              <div>
-                <CircleCheck size={16} />
-                <span>
-                  Không cắt mất nhãn
-                  <small>Đủ khoảng đệm 12 px</small>
-                </span>
+                <div className="question-review-list" aria-label="Danh sách câu hỏi">
+                  {result.questions.map((item, index) => {
+                    const id = item.id ?? item.code;
+                    return (
+                      <button
+                        type="button"
+                        key={id}
+                        className={`${index === selectedQuestionIndex ? "is-active" : ""} ${
+                          confirmedQuestions.includes(id) ? "is-confirmed" : ""
+                        }`}
+                        onClick={() => setSelectedQuestionIndex(index)}
+                      >
+                        {confirmedQuestions.includes(id) ? <Check size={12} /> : index + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {question ? (
+                  <>
+                    <div className="confidence-row compact-confidence">
+                      <div>
+                        <span>Độ tin cậy OCR</span>
+                        <strong>
+                          {Math.round((question.confidence ?? 0) * 100)}%
+                        </strong>
+                      </div>
+                    </div>
+
+                    <label className="field-group">
+                      <span>Mã câu</span>
+                      <input
+                        value={question.code}
+                        onChange={(event) =>
+                          updateQuestion({ code: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <label className="field-group">
+                      <span>Nội dung câu hỏi</span>
+                      <textarea
+                        className="question-content-editor"
+                        value={question.content}
+                        onChange={(event) =>
+                          updateQuestion({ content: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <label className="field-group">
+                      <span>LaTeX công thức</span>
+                      <textarea
+                        className="formula-editor"
+                        value={question.latex}
+                        onChange={(event) =>
+                          updateQuestion({ latex: event.target.value })
+                        }
+                        spellCheck={false}
+                      />
+                    </label>
+                    <div className="formula-review-preview">
+                      <Sigma size={15} />
+                      <code>{question.latex || "Không có công thức riêng"}</code>
+                    </div>
+
+                    <div className="two-column-fields review-fields">
+                      <label className="field-group">
+                        <span>Khối lớp</span>
+                        <select
+                          value={question.grade ?? 9}
+                          onChange={(event) =>
+                            updateQuestion({ grade: Number(event.target.value) })
+                          }
+                        >
+                          {[9, 8, 7, 6].map((grade) => (
+                            <option key={grade} value={grade}>
+                              Lớp {grade}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field-group">
+                        <span>Độ khó</span>
+                        <select
+                          value={question.difficulty}
+                          onChange={(event) =>
+                            updateQuestion({
+                              difficulty: event.target.value as Difficulty,
+                            })
+                          }
+                        >
+                          {(Object.keys(difficultyMeta) as Difficulty[]).map(
+                            (value) => (
+                              <option key={value} value={value}>
+                                {difficultyMeta[value].label}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+                    </div>
+
+                    <label className="field-group">
+                      <span>Mảng kiến thức</span>
+                      <input
+                        value={question.topic}
+                        onChange={(event) =>
+                          updateQuestion({ topic: event.target.value })
+                        }
+                      />
+                    </label>
+
+                    <label className="field-group">
+                      <span>Đáp án / Gợi ý</span>
+                      <input
+                        value={question.answer ?? ""}
+                        onChange={(event) =>
+                          updateQuestion({ answer: event.target.value })
+                        }
+                        placeholder="Có thể bổ sung sau"
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <div className="empty-state">Không có câu hỏi để kiểm tra.</div>
+                )}
               </div>
-              <div>
-                <CircleCheck size={16} />
-                <span>
-                  Đúng câu hỏi
-                  <small>Neo sau đoạn mô tả hình</small>
-                </span>
-              </div>
-              <div>
-                <CircleCheck size={16} />
-                <span>
-                  Giữ bản nguồn
-                  <small>Checksum đã ghi nhận</small>
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="panel-actions">
-            <button type="button" className="button button-quiet grow">
-              <RefreshCcw size={16} />
-              Khoanh lại
+            <button
+              type="button"
+              className="button button-quiet grow"
+              disabled={isBusy || workflowStage !== "REVIEW"}
+              onClick={() => {
+                if (activePanel === "regions" && region) {
+                  setConfirmedRegions((current) =>
+                    current.filter((item) => item !== region.id),
+                  );
+                } else {
+                  setSelectedQuestionIndex((current) => Math.max(0, current - 1));
+                }
+              }}
+            >
+              {activePanel === "regions" ? (
+                <RefreshCcw size={16} />
+              ) : (
+                <ChevronRight className="rotate-back" size={16} />
+              )}
+              {activePanel === "regions" ? "Kiểm tra lại" : "Câu trước"}
             </button>
             <button
               type="button"
               className="button button-primary grow"
-              onClick={documentId ? onProcess : confirmRegion}
-              disabled={isUploading || isProcessing}
+              onClick={handlePrimaryAction}
+              disabled={isBusy}
             >
-              {isUploading || isProcessing ? (
+              {isBusy ? (
                 <span className="spinner" />
-              ) : documentId ? (
+              ) : workflowStage === "UPLOADED" ? (
                 <Sparkles size={16} />
+              ) : activePanel === "questions" && allQuestionsConfirmed ? (
+                <LibraryBig size={16} />
               ) : (
                 <Check size={16} />
               )}
@@ -686,9 +1028,19 @@ function ReviewWorkspace({
                 ? "Đang tải..."
                 : isProcessing
                   ? "Gemini đang đọc..."
-                  : documentId
-                    ? "Nhận diện tài liệu"
-                    : "Xác nhận vùng"}
+                  : isSaving
+                    ? "Đang nhập thư viện..."
+                    : !documentId
+                      ? "Chọn tài liệu"
+                      : workflowStage === "UPLOADED"
+                        ? "Nhận diện tài liệu"
+                        : activePanel === "regions"
+                          ? allRegionsConfirmed
+                            ? "Kiểm tra câu hỏi"
+                            : "Xác nhận vùng"
+                          : allQuestionsConfirmed
+                            ? "Đưa vào thư viện"
+                            : "Xác nhận câu"}
             </button>
           </div>
         </aside>
@@ -1838,8 +2190,12 @@ export function MathOcrStudio() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
+  const [workflowStage, setWorkflowStage] =
+    useState<WorkflowStage>("EMPTY");
+  const [reviewNonce, setReviewNonce] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [processingMode, setProcessingMode] = useState<string | null>("demo");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -1890,6 +2246,9 @@ export function MathOcrStudio() {
     setSelectedFile(file);
     setSelectedPreview(preview);
     setDocumentId(null);
+    setWorkflowStage("EMPTY");
+    setProcessingMode(null);
+    setReviewNonce((current) => current + 1);
     setIsUploading(true);
 
     try {
@@ -1903,6 +2262,7 @@ export function MathOcrStudio() {
       };
       if (!response.ok) throw new Error(payload.error);
       setDocumentId(payload.document?.id ?? null);
+      setWorkflowStage("UPLOADED");
       setNotice(`Đã tải ${file.name} · ${formatFileSize(file.size)}`);
       await loadOverview();
       return true;
@@ -1947,7 +2307,8 @@ export function MathOcrStudio() {
       if (!response.ok) throw new Error(payload.error);
       if (payload.result) setOcrResult(payload.result);
       setProcessingMode(payload.mode ?? "demo");
-      setDocumentId(null);
+      setWorkflowStage("REVIEW");
+      setReviewNonce((current) => current + 1);
       setNotice(
         payload.mode === "gemini"
           ? `Đã nhận diện bằng ${payload.model ?? "Gemini"}; cần duyệt vùng ảnh.`
@@ -1958,6 +2319,66 @@ export function MathOcrStudio() {
       setNotice(error instanceof Error ? error.message : "Không thể xử lý tài liệu.");
     } finally {
       setIsProcessing(false);
+    }
+  }
+
+  async function saveReview(
+    confirmedQuestionIds: string[],
+    confirmedRegionIds: string[],
+  ) {
+    if (!documentId) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/review", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          documentId,
+          questions: ocrResult.questions.map((question) => ({
+            id: question.id,
+            code: question.code,
+            content: question.content,
+            latex: question.latex,
+            grade: question.grade ?? 9,
+            topic: question.topic,
+            difficulty: question.difficulty,
+            answer: question.answer ?? "",
+            assetCount: question.assetCount,
+          })),
+          regions: ocrResult.imageRegions.map((region) => ({
+            id: region.id,
+            label: region.label,
+            regionType: region.regionType ?? "geometry",
+            box: region.box,
+            questionId:
+              region.questionId ??
+              ocrResult.questions.find(
+                (question) => question.code === region.questionCode,
+              )?.id ??
+              null,
+            questionCode: region.questionCode,
+          })),
+          confirmedQuestionIds,
+          confirmedRegionIds,
+        }),
+      });
+      const payload = (await response.json()) as {
+        reviewed?: { questions: number; regions: number };
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error);
+      setWorkflowStage("COMPLETED");
+      await loadOverview();
+      setNotice(
+        `Đã nhập ${payload.reviewed?.questions ?? ocrResult.questions.length} câu đã duyệt vào thư viện.`,
+      );
+      setView("library");
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : "Không thể nhập câu hỏi vào thư viện.",
+      );
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -1973,14 +2394,19 @@ export function MathOcrStudio() {
       />
       {view === "review" ? (
         <ReviewWorkspace
+          key={reviewNonce}
           result={ocrResult}
           selectedFile={selectedFile}
           selectedPreview={selectedPreview}
           documentId={documentId}
+          workflowStage={workflowStage}
           onFileChange={handleFileChange}
           isUploading={isUploading}
           isProcessing={isProcessing}
+          isSaving={isSaving}
           onProcess={processDocument}
+          onResultChange={setOcrResult}
+          onSaveReview={saveReview}
           processingMode={processingMode}
         />
       ) : null}

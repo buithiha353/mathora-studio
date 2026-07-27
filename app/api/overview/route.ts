@@ -6,7 +6,9 @@ export async function GET() {
     const [documents, questions, exams, apiKeys, latestQuestions] =
       await Promise.all([
         db.prepare("SELECT COUNT(*) AS total FROM documents").first<{ total: number }>(),
-        db.prepare("SELECT COUNT(*) AS total FROM questions").first<{ total: number }>(),
+        db
+          .prepare("SELECT COUNT(*) AS total FROM questions WHERE status = 'REVIEWED'")
+          .first<{ total: number }>(),
         db.prepare("SELECT COUNT(*) AS total FROM exams").first<{ total: number }>(),
         db
           .prepare("SELECT COUNT(*) AS total FROM api_keys WHERE status = 'ACTIVE'")
@@ -16,6 +18,7 @@ export async function GET() {
             `SELECT id, code, content, latex, grade, topic, difficulty, type,
                     answer, asset_count AS assetCount, status, created_at AS createdAt
              FROM questions
+             WHERE status = 'REVIEWED'
              ORDER BY created_at DESC, code ASC
              LIMIT 30`,
           )

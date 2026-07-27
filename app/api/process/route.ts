@@ -66,6 +66,7 @@ const ocrSchema = {
 };
 
 type OcrQuestion = {
+  id?: string;
   code: string;
   grade: number;
   content: string;
@@ -75,6 +76,35 @@ type OcrQuestion = {
   confidence: number;
   assetCount: number;
 };
+
+type OcrRegion = {
+  id?: string;
+  label: string;
+  box: number[];
+  questionCode: string;
+  questionId?: string | null;
+  regionType?: string;
+  confidence: number;
+};
+
+type OcrResult = {
+  document: { name: string; pages: number; confidence: number };
+  imageRegions: OcrRegion[];
+  questions: OcrQuestion[];
+};
+
+function normalizeConfidence(value: number) {
+  const numeric = Number(value) || 0;
+  return Math.max(0, Math.min(1, numeric > 1 ? numeric / 100 : numeric));
+}
+
+function inferRegionType(label: string) {
+  const normalized = label.toLocaleLowerCase("vi");
+  if (normalized.includes("bảng")) return "table";
+  if (normalized.includes("đồ thị") || normalized.includes("biểu đồ")) return "chart";
+  if (normalized.includes("công thức")) return "formula";
+  return "geometry";
+}
 
 export async function POST(request: Request) {
   try {
@@ -119,7 +149,7 @@ export async function POST(request: Request) {
     for (const byte of bytes) binary += String.fromCharCode(byte);
     const base64 = btoa(binary);
 
-    let result: typeof demoOcrResult;
+    let result: OcrResult;
     let mode = "gemini";
     let model: string | null = null;
 
@@ -134,7 +164,7 @@ Phát hiện vùng hình học, đồ thị, bảng và hình minh họa bằng 
 Tách chính xác từng câu hỏi, xác định khối lớp từ 6 đến 9, phân loại theo mảng kiến thức Toán THCS và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
 Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".`,
       });
-      result = response.data as typeof demoOcrResult;
+      result = response.data as OcrResult;
       model = response.model;
     } catch (error) {
       if (!(error instanceof NoGeminiKeyError)) throw error;
@@ -145,35 +175,86 @@ Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài li
       mode = "demo";
     }
 
-    const questions = Array.isArray(result.questions) ? result.questions : [];
+    const questions = (Array.isArray(result.questions) ? result.questions : []).map(
+      (question, index) => ({
+        ...question,
+        id: `${documentId}-q-${index + 1}`,
+        grade: Math.min(9, Math.max(6, Number(question.grade) || 9)),
+        confidence: normalizeConfidence(question.confidence),
+        assetCount: Math.max(0, Number(question.assetCount) || 0),
+      }),
+    );
+    const questionIds = new Map(
+      questions.map((question) => [question.code, question.id]),
+    );
+    const imageRegions = (
+      Array.isArray(result.imageRegions) ? result.imageRegions : []
+    ).map((region, index) => ({
+      ...region,
+      id: `${documentId}-r-${index + 1}`,
+      box: Array.from({ length: 4 }, (_, boxIndex) =>
+        Math.max(0, Math.min(100, Number(region.box?.[boxIndex]) || 0)),
+      ),
+      questionId: questionIds.get(region.questionCode) ?? null,
+      regionType: inferRegionType(region.label),
+      confidence: normalizeConfidence(region.confidence),
+    }));
+    result = { ...result, questions, imageRegions };
+
     await db.batch(
-      questions.map((question: OcrQuestion, index: number) =>
+      [
         db
-          .prepare(
-            `INSERT OR REPLACE INTO questions
+          .prepare("DELETE FROM image_regions WHERE document_id = ?")
+          .bind(documentId),
+        db
+          .prepare("DELETE FROM questions WHERE source_document_id = ?")
+          .bind(documentId),
+        ...questions.map((question) =>
+          db
+            .prepare(
+              `INSERT INTO questions
               (id, code, content, latex, grade, topic, difficulty, type,
                answer, asset_count, source_document_id, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, 'MULTIPLE_CHOICE', '', ?, ?, 'AWAITING_REVIEW')`,
+            )
+            .bind(
+              question.id,
+              question.code,
+              question.content,
+              question.latex,
+              question.grade,
+              question.topic,
+              question.difficulty,
+              question.assetCount,
+              documentId,
+            ),
+        ),
+        ...imageRegions.map((region) =>
+          db
+            .prepare(
+              `INSERT INTO image_regions
+                (id, document_id, question_id, question_code, label, region_type,
+                 box_json, confidence, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AWAITING_REVIEW')`,
+            )
+            .bind(
+              region.id,
+              documentId,
+              region.questionId,
+              region.questionCode,
+              region.label,
+              region.regionType,
+              JSON.stringify(region.box),
+              Math.round(region.confidence * 10000),
+            ),
+        ),
+        db
+          .prepare(
+            "UPDATE documents SET status = 'REGION_REVIEW', page_count = ? WHERE id = ?",
           )
-          .bind(
-            `${documentId}-q-${index + 1}`,
-            question.code,
-            question.content,
-            question.latex,
-            Math.min(9, Math.max(6, Number(question.grade) || 9)),
-            question.topic,
-            question.difficulty,
-            question.assetCount,
-            documentId,
-          ),
-      ),
+          .bind(result.document.pages || 1, documentId),
+      ],
     );
-    await db
-      .prepare(
-        "UPDATE documents SET status = 'REGION_REVIEW', page_count = ? WHERE id = ?",
-      )
-      .bind(result.document.pages || 1, documentId)
-      .run();
 
     return Response.json({ result, mode, model });
   } catch (error) {

@@ -29,6 +29,19 @@ export const questions = sqliteTable("questions", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const imageRegions = sqliteTable("image_regions", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").notNull(),
+  questionId: text("question_id"),
+  questionCode: text("question_code").notNull(),
+  label: text("label").notNull(),
+  regionType: text("region_type").notNull().default("geometry"),
+  boxJson: text("box_json").notNull(),
+  confidence: integer("confidence").notNull().default(0),
+  status: text("status").notNull().default("AWAITING_REVIEW"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
   label: text("label").notNull(),
