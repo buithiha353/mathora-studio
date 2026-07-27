@@ -49,7 +49,7 @@ export const apiKeys = sqliteTable("api_keys", {
   cipherText: text("cipher_text").notNull(),
   iv: text("iv").notNull(),
   hint: text("hint").notNull(),
-  model: text("model").notNull().default("gemini-3.6-flash"),
+  model: text("model").notNull().default("gemini-3.5-flash"),
   priority: integer("priority").notNull().default(1),
   usageCount: integer("usage_count").notNull().default(0),
   failureCount: integer("failure_count").notNull().default(0),

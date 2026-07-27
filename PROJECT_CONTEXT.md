@@ -10,6 +10,7 @@ Production: https://mathora-studio.nhatha-drive10.chatgpt.site
 
 Current deployed version: 4  
 Current deployed source: `7916221e344820cdfd1eb5050875eb56a665a21b`
+Next validated version: 5 (pending deployment)
 
 ## Product rules
 
@@ -19,7 +20,7 @@ Current deployed source: `7916221e344820cdfd1eb5050875eb56a665a21b`
 - Questions must be reviewed and confirmed before they can be used to generate exams.
 - Image sharpening is an independent tool, not an OCR pipeline step.
 - Illustration generation must keep every displayed datum traceable to the problem statement.
-- OCR recognition is pinned to the stable model `gemini-3.6-flash`.
+- OCR recognition is pinned to the stable model `gemini-3.5-flash`.
 
 ## Architecture
 
@@ -38,7 +39,7 @@ Current deployed source: `7916221e344820cdfd1eb5050875eb56a665a21b`
 ## Implemented capabilities
 
 1. Upload PDF, PNG, JPG, JPEG, or WebP source documents to R2.
-2. Recognize document metadata, THCS questions, LaTeX, knowledge topics, grades, difficulty, and normalized visual-region boxes with Gemini 3.6 Flash.
+2. Recognize document metadata, THCS questions, LaTeX, knowledge topics, grades, difficulty, and normalized visual-region boxes with Gemini 3.5 Flash.
 3. Rotate healthy API keys by priority and usage; cooldown project keys on quota errors.
 4. Persist extracted questions and image regions as awaiting review.
 5. Let users review region labels/types/question links and edit question content, LaTeX, grade, topic, difficulty, and answer.
@@ -79,7 +80,7 @@ Latest version passed:
 - production build;
 - TypeScript check;
 - ESLint;
-- four application tests, including the human-review gate and Gemini 3.6 Flash pin.
+- four application tests, including the human-review gate and Gemini 3.5 Flash pin.
 
 ## Next work
 
@@ -96,3 +97,4 @@ Latest version passed:
 - 2026-07-28 — v3: Added persistent image-region and question review gates before library/exam use.
 - 2026-07-28 — v4: Pinned OCR recognition to stable `gemini-3.6-flash`, upgraded key validation/defaults, and removed deprecated sampling parameters.
 - 2026-07-28 — Context workflow: Deployed v4 to production and added the authoritative `PROJECT_CONTEXT.md` workflow; no application behavior changed.
+- 2026-07-28 — v5: Changed OCR recognition and stored API-key model metadata to stable `gemini-3.5-flash`; deployment pending.
