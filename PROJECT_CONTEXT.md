@@ -7,6 +7,7 @@ Last updated: 2026-07-28 (Asia/Saigon)
 Mathora Studio is a Vietnamese web application for OCR and managing lower-secondary mathematics exams (THCS, grades 6–9). It preserves formulas and visual regions, requires human review before questions enter the library, generates exams from a difficulty matrix, manages rotating Gemini API keys, sharpens images in a separate tool, and creates 2D textbook-style illustrations.
 
 Production: https://mathora-studio.nhatha-drive10.chatgpt.site
+GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 6
 - Current deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
@@ -98,3 +99,4 @@ Latest version passed:
 - 2026-07-28 — Context workflow: Deployed v4 to production and added the authoritative `PROJECT_CONTEXT.md` workflow; no application behavior changed.
 - 2026-07-28 — v5: Changed OCR recognition and stored API-key model metadata to stable `gemini-3.5-flash`; deployed to production.
 - 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployed to production.
+- 2026-07-28 — GitHub publication: Published the complete tracked source and history to the private `buithiha353/mathora-studio` repository; generated ZIP exports remain local only.
