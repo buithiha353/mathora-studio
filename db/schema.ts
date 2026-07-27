@@ -18,7 +18,7 @@ export const questions = sqliteTable("questions", {
   code: text("code").notNull(),
   content: text("content").notNull(),
   latex: text("latex").notNull().default(""),
-  grade: integer("grade").notNull().default(12),
+  grade: integer("grade").notNull().default(9),
   topic: text("topic").notNull(),
   difficulty: text("difficulty").notNull(),
   type: text("type").notNull().default("MULTIPLE_CHOICE"),

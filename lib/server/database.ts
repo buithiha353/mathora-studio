@@ -19,7 +19,7 @@ const schemaStatements = [
     code TEXT NOT NULL,
     content TEXT NOT NULL,
     latex TEXT NOT NULL DEFAULT '',
-    grade INTEGER NOT NULL DEFAULT 12,
+    grade INTEGER NOT NULL DEFAULT 9,
     topic TEXT NOT NULL,
     difficulty TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'MULTIPLE_CHOICE',
@@ -84,11 +84,11 @@ const demoQuestions = [
   {
     id: "q-demo-01",
     code: "MTH-001",
-    content: "Cho hàm số y = x³ − 3x + 1. Tìm các điểm cực trị của hàm số.",
-    latex: "y=x^3-3x+1",
-    topic: "Hàm số",
+    content: "Giải phương trình x² − 5x + 6 = 0.",
+    latex: "x^2-5x+6=0",
+    topic: "Phương trình bậc hai",
     difficulty: "HIEU",
-    answer: "x = ±1",
+    answer: "x = 2 hoặc x = 3",
     assetCount: 0,
   },
   {
@@ -104,41 +104,41 @@ const demoQuestions = [
   {
     id: "q-demo-03",
     code: "MTH-003",
-    content: "Tính tích phân ∫₀¹(3x² + 2x)dx.",
-    latex: "\\int_0^1(3x^2+2x)\\,dx",
-    topic: "Nguyên hàm – Tích phân",
+    content: "Tam giác ABC vuông tại A, có AB = 6 cm và AC = 8 cm. Tính BC.",
+    latex: "BC=\\sqrt{AB^2+AC^2}",
+    topic: "Định lý Pythagore",
     difficulty: "BIET",
-    answer: "2",
-    assetCount: 0,
+    answer: "10 cm",
+    assetCount: 1,
   },
   {
     id: "q-demo-04",
     code: "MTH-004",
-    content: "Cho hình chóp S.ABCD có đáy là hình vuông cạnh a, SA vuông góc với đáy. Tính góc giữa SC và mặt đáy.",
-    latex: "SA\\perp(ABCD)",
-    topic: "Hình học không gian",
+    content: "Từ điểm A ngoài đường tròn (O), kẻ hai tiếp tuyến AB và AC. Chứng minh AB = AC.",
+    latex: "AB=AC",
+    topic: "Đường tròn",
     difficulty: "VAN_DUNG_CAO",
-    answer: "Theo dữ kiện SA",
+    answer: "Hai tam giác vuông ABO và ACO bằng nhau",
     assetCount: 1,
   },
   {
     id: "q-demo-05",
     code: "MTH-005",
-    content: "Giải phương trình log₂(x − 1) + log₂(x + 1) = 3.",
-    latex: "\\log_2(x-1)+\\log_2(x+1)=3",
-    topic: "Mũ – Logarit",
+    content: "Cho hàm số y = 2x − 3. Tìm tọa độ giao điểm của đồ thị với trục tung.",
+    latex: "y=2x-3",
+    topic: "Hàm số bậc nhất",
     difficulty: "HIEU",
-    answer: "x = 3",
+    answer: "(0; −3)",
     assetCount: 0,
   },
   {
     id: "q-demo-06",
     code: "MTH-006",
-    content: "Một hộp có 5 bi đỏ và 4 bi xanh. Lấy ngẫu nhiên 2 bi. Tính xác suất lấy được hai bi cùng màu.",
-    latex: "P=\\frac{C_5^2+C_4^2}{C_9^2}",
+    content: "Một hộp có 5 bi đỏ và 4 bi xanh. Lấy ngẫu nhiên 1 bi. Tính xác suất lấy được bi đỏ.",
+    latex: "P=\\frac{5}{9}",
     topic: "Xác suất",
     difficulty: "VAN_DUNG",
-    answer: "4/9",
+    answer: "5/9",
     assetCount: 1,
   },
 ];
@@ -147,32 +147,26 @@ async function initialize() {
   const db = requireDb();
   await db.batch(schemaStatements.map((statement) => db.prepare(statement)));
 
-  const count = await db
-    .prepare("SELECT COUNT(*) AS total FROM questions")
-    .first<{ total: number }>();
-
-  if (Number(count?.total ?? 0) === 0) {
-    await db.batch(
-      demoQuestions.map((question) =>
-        db
-          .prepare(
-            `INSERT INTO questions
-              (id, code, content, latex, grade, topic, difficulty, type, answer, asset_count, status)
-             VALUES (?, ?, ?, ?, 12, ?, ?, 'MULTIPLE_CHOICE', ?, ?, 'REVIEWED')`,
-          )
-          .bind(
-            question.id,
-            question.code,
-            question.content,
-            question.latex,
-            question.topic,
-            question.difficulty,
-            question.answer,
-            question.assetCount,
-          ),
-      ),
-    );
-  }
+  await db.batch(
+    demoQuestions.map((question) =>
+      db
+        .prepare(
+          `INSERT OR REPLACE INTO questions
+            (id, code, content, latex, grade, topic, difficulty, type, answer, asset_count, status)
+           VALUES (?, ?, ?, ?, 9, ?, ?, 'MULTIPLE_CHOICE', ?, ?, 'REVIEWED')`,
+        )
+        .bind(
+          question.id,
+          question.code,
+          question.content,
+          question.latex,
+          question.topic,
+          question.difficulty,
+          question.answer,
+          question.assetCount,
+        ),
+    ),
+  );
 }
 
 export async function ensureDatabase() {

@@ -14,7 +14,9 @@ test("defines the complete Mathora Studio workspace", async () => {
   assert.match(page, /MathOcrStudio/);
   assert.match(layout, /Mathora Studio/);
   assert.match(studio, /Bàn xử lý/);
-  assert.match(studio, /Làm nét trước OCR/);
+  assert.match(studio, /Làm nét ảnh độc lập/);
+  assert.doesNotMatch(studio, /Làm nét trước OCR/);
+  assert.match(studio, /Lớp 9/);
   assert.match(studio, /Thư viện câu hỏi/);
   assert.match(studio, /Tạo đề theo ma trận/);
   assert.match(studio, /Hình dung bài toán thực tế/);

@@ -8,21 +8,24 @@ export async function POST(request: Request) {
       title?: string;
       duration?: number;
       totalQuestions?: number;
+      grade?: number;
       difficulty?: Matrix;
     };
     const totalQuestions = Math.max(
       1,
       Math.min(100, Number(payload.totalQuestions ?? 10)),
     );
+    const grade = Math.min(9, Math.max(6, Number(payload.grade) || 9));
     const db = await ensureDatabase();
     const rows = await db
       .prepare(
         `SELECT id, code, content, latex, topic, difficulty, answer,
                 asset_count AS assetCount
          FROM questions
-         WHERE status IN ('REVIEWED', 'AWAITING_REVIEW')
+         WHERE grade = ? AND status IN ('REVIEWED', 'AWAITING_REVIEW')
          ORDER BY created_at DESC`,
       )
+      .bind(grade)
       .all<Record<string, unknown>>();
 
     const requested = payload.difficulty ?? {};

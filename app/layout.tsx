@@ -20,30 +20,30 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s · Mathora Studio",
     },
     description:
-      "OCR đề thi Toán bằng Gemini, bảo toàn công thức, hình ảnh và cấu trúc câu hỏi.",
+      "OCR đề thi Toán THCS bằng Gemini, bảo toàn công thức, hình ảnh và cấu trúc câu hỏi.",
     icons: {
       icon: "/favicon.svg",
       shortcut: "/favicon.svg",
     },
     openGraph: {
       title: "Mathora Studio",
-      description: "OCR đề Toán. Giữ trọn công thức & hình ảnh.",
+      description: "OCR đề Toán THCS. Giữ trọn công thức & hình ảnh.",
       type: "website",
       locale: "vi_VN",
       url: origin,
       images: [
         {
           url: `${origin}/og.png`,
-          width: 1734,
-          height: 910,
-          alt: "Mathora Studio — không gian OCR đề thi Toán",
+          width: 1731,
+          height: 909,
+          alt: "Mathora Studio — không gian OCR đề thi Toán THCS",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
       title: "Mathora Studio",
-      description: "OCR đề Toán. Giữ trọn công thức & hình ảnh.",
+      description: "OCR đề Toán THCS. Giữ trọn công thức & hình ảnh.",
       images: [`${origin}/og.png`],
     },
   };

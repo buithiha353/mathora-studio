@@ -38,6 +38,7 @@ const ocrSchema = {
         type: "OBJECT",
         properties: {
           code: { type: "STRING" },
+          grade: { type: "INTEGER" },
           content: { type: "STRING" },
           latex: { type: "STRING" },
           topic: { type: "STRING" },
@@ -50,6 +51,7 @@ const ocrSchema = {
         },
         required: [
           "code",
+          "grade",
           "content",
           "latex",
           "topic",
@@ -65,6 +67,7 @@ const ocrSchema = {
 
 type OcrQuestion = {
   code: string;
+  grade: number;
   content: string;
   latex: string;
   topic: string;
@@ -125,10 +128,10 @@ export async function POST(request: Request) {
         mimeType: document.mimeType,
         data: base64,
         schema: ocrSchema,
-        prompt: `Bạn là hệ thống OCR đề thi Toán tiếng Việt.
+        prompt: `Bạn là hệ thống OCR đề thi Toán THCS tiếng Việt dành cho các lớp 6, 7, 8 và 9.
 Đọc tài liệu theo thứ tự thị giác. Bảo toàn mọi công thức dưới dạng LaTeX.
 Phát hiện vùng hình học, đồ thị, bảng và hình minh họa bằng box [ymin, xmin, ymax, xmax] chuẩn hóa 0-100.
-Tách chính xác từng câu hỏi, phân loại chủ đề và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
+Tách chính xác từng câu hỏi, xác định khối lớp từ 6 đến 9, phân loại theo mảng kiến thức Toán THCS và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
 Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".`,
       });
       result = response.data as typeof demoOcrResult;
@@ -150,13 +153,14 @@ Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài li
             `INSERT OR REPLACE INTO questions
               (id, code, content, latex, grade, topic, difficulty, type,
                answer, asset_count, source_document_id, status)
-             VALUES (?, ?, ?, ?, 12, ?, ?, 'MULTIPLE_CHOICE', '', ?, ?, 'AWAITING_REVIEW')`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'MULTIPLE_CHOICE', '', ?, ?, 'AWAITING_REVIEW')`,
           )
           .bind(
             `${documentId}-q-${index + 1}`,
             question.code,
             question.content,
             question.latex,
+            Math.min(9, Math.max(6, Number(question.grade) || 9)),
             question.topic,
             question.difficulty,
             question.assetCount,

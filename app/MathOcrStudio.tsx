@@ -55,12 +55,19 @@ import {
 } from "react";
 import { demoIllustrationSpec, demoOcrResult } from "@/lib/demo-data";
 
-type View = "review" | "library" | "exam" | "illustration" | "settings";
+type View =
+  | "review"
+  | "library"
+  | "exam"
+  | "enhance"
+  | "illustration"
+  | "settings";
 type Difficulty = "BIET" | "HIEU" | "VAN_DUNG" | "VAN_DUNG_CAO";
 
 type Question = {
   id?: string;
   code: string;
+  grade?: number;
   content: string;
   latex: string;
   topic: string;
@@ -111,6 +118,12 @@ const navigation: Array<{
   { id: "library", label: "Thư viện", description: "Kho câu hỏi", icon: LibraryBig },
   { id: "exam", label: "Tạo đề", description: "Theo ma trận", icon: FilePlus2 },
   {
+    id: "enhance",
+    label: "Làm nét",
+    description: "Công cụ ảnh riêng",
+    icon: Sparkles,
+  },
+  {
     id: "illustration",
     label: "Minh họa",
     description: "Vẽ hình từ đề",
@@ -135,9 +148,9 @@ const difficultyMeta: Record<
 
 const steps = [
   { label: "Tải lên", status: "done" },
-  { label: "Làm nét", status: "done" },
   { label: "Nhận diện", status: "done" },
   { label: "Duyệt vùng", status: "active" },
+  { label: "Kiểm tra nội dung", status: "upcoming" },
   { label: "Thư viện", status: "upcoming" },
 ];
 
@@ -197,7 +210,6 @@ function DocumentPaper({
   onSelectRegion,
   preview,
   previewType,
-  sharpen,
 }: {
   result: OcrResult;
   selectedRegion: string;
@@ -205,20 +217,10 @@ function DocumentPaper({
   onSelectRegion: (id: string) => void;
   preview: string | null;
   previewType: string | null;
-  sharpen: string;
 }) {
-  const filter =
-    sharpen === "LIGHT"
-      ? "contrast(1.05) saturate(.92)"
-      : sharpen === "MEDIUM"
-        ? "contrast(1.12) saturate(.82)"
-        : sharpen === "STRONG"
-          ? "contrast(1.22) grayscale(.15)"
-          : "none";
-
   return (
     <div className="paper-shell" aria-label="Bản xem trước tài liệu">
-      <div className="paper" style={{ filter }}>
+      <div className="paper">
         {preview && previewType?.startsWith("image/") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="uploaded-preview" src={preview} alt="Tài liệu đã tải lên" />
@@ -233,28 +235,28 @@ function DocumentPaper({
           </object>
         ) : (
           <div className="sample-page">
-            <div className="paper-kicker">BỘ GIÁO DỤC VÀ ĐÀO TẠO</div>
-            <h2>ĐỀ KHẢO SÁT CHẤT LƯỢNG LỚP 12</h2>
+            <div className="paper-kicker">PHÒNG GIÁO DỤC VÀ ĐÀO TẠO</div>
+            <h2>ĐỀ KIỂM TRA CHẤT LƯỢNG LỚP 9</h2>
             <div className="paper-meta">
               <span>Môn: TOÁN</span>
               <span>Thời gian: 90 phút</span>
             </div>
             <div className="paper-rule" />
             <p>
-              <strong>Câu 1.</strong> Cho hàm số{" "}
-              <span className="math">y = x³ − 3x + 1</span>. Tìm các điểm cực trị
-              của hàm số.
+              <strong>Câu 1.</strong> Giải phương trình{" "}
+              <span className="math">x² − 5x + 6 = 0</span>.
             </p>
             <div className="answers">
-              <span>A. x = 1</span>
-              <span>B. x = −1</span>
-              <span>C. x = ±1</span>
-              <span>D. x = 0</span>
+              <span>A. x = 2; 3</span>
+              <span>B. x = −2; −3</span>
+              <span>C. x = 1; 6</span>
+              <span>D. x = −1; −6</span>
             </div>
             <p>
-              <strong>Câu 2.</strong> Tính tích phân
+              <strong>Câu 2.</strong> Tam giác ABC vuông tại A, AB = 6 cm,
+              AC = 8 cm. Tính BC.
             </p>
-            <div className="display-math">∫₀¹ (3x² + 2x) dx</div>
+            <div className="display-math">BC = √(AB² + AC²)</div>
             <div className="answers">
               <span>A. 1</span>
               <span>B. 2</span>
@@ -266,23 +268,19 @@ function DocumentPaper({
               đi tạo với bờ một góc 30°. Tính quãng đường thuyền đi được.
             </p>
             <p>
-              <strong>Câu 4.</strong> Cho hình chóp S.ABCD có đáy là hình vuông
-              cạnh a, SA vuông góc với đáy. Góc giữa SC và mặt đáy là
+              <strong>Câu 4.</strong> Từ điểm A ngoài đường tròn (O), kẻ hai
+              tiếp tuyến AB và AC. Chứng minh AB = AC.
             </p>
-            <div className="geometry-sketch" aria-label="Hình chóp S.ABCD">
-              <span className="point point-s">S</span>
-              <span className="point point-a">A</span>
-              <span className="point point-b">B</span>
-              <span className="point point-c">C</span>
-              <span className="point point-d">D</span>
-              <i className="edge edge-sa" />
-              <i className="edge edge-sb" />
-              <i className="edge edge-sc" />
-              <i className="edge edge-sd" />
-              <i className="edge edge-ab" />
-              <i className="edge edge-bc" />
-              <i className="edge edge-cd" />
-              <i className="edge edge-da" />
+            <div className="circle-sketch" aria-label="Hai tiếp tuyến từ A đến đường tròn O">
+              <i className="circle-shape" />
+              <i className="circle-line circle-line-ab" />
+              <i className="circle-line circle-line-ac" />
+              <i className="circle-line circle-line-ob" />
+              <i className="circle-line circle-line-oc" />
+              <span className="circle-point circle-point-a">A</span>
+              <span className="circle-point circle-point-o">O</span>
+              <span className="circle-point circle-point-b">B</span>
+              <span className="circle-point circle-point-c">C</span>
             </div>
             <div className="paper-page-number">1 / {result.document.pages}</div>
           </div>
@@ -346,7 +344,7 @@ function Sidebar({
 
       <nav className="primary-nav" aria-label="Điều hướng chính">
         <p className="nav-eyebrow">Không gian làm việc</p>
-        {navigation.slice(0, 4).map((item) => {
+        {navigation.slice(0, 5).map((item) => {
           const Icon = item.icon;
           return (
             <button
@@ -447,8 +445,6 @@ function ReviewWorkspace({
   isUploading,
   isProcessing,
   onProcess,
-  sharpen,
-  setSharpen,
   processingMode,
 }: {
   result: OcrResult;
@@ -459,8 +455,6 @@ function ReviewWorkspace({
   isUploading: boolean;
   isProcessing: boolean;
   onProcess: () => void;
-  sharpen: string;
-  setSharpen: (value: string) => void;
   processingMode: string | null;
 }) {
   const [selectedRegion, setSelectedRegion] = useState(
@@ -471,12 +465,6 @@ function ReviewWorkspace({
   const region =
     result.imageRegions.find((item) => item.id === selectedRegion) ??
     result.imageRegions[0];
-
-  useEffect(() => {
-    if (!result.imageRegions.some((item) => item.id === selectedRegion)) {
-      setSelectedRegion(result.imageRegions[0]?.id ?? "");
-    }
-  }, [result, selectedRegion]);
 
   function confirmRegion() {
     if (!region) return;
@@ -551,12 +539,11 @@ function ReviewWorkspace({
           </div>
           <DocumentPaper
             result={result}
-            selectedRegion={selectedRegion}
+            selectedRegion={region?.id ?? ""}
             confirmed={confirmed}
             onSelectRegion={setSelectedRegion}
             preview={selectedPreview}
             previewType={selectedFile?.type ?? null}
-            sharpen={sharpen}
           />
           <div className="stage-footer">
             <span>
@@ -603,14 +590,14 @@ function ReviewWorkspace({
             {region ? (
               <>
                 <div className="region-preview">
-                  <div className="mini-pyramid">
-                    <i className="mini-edge e1" />
-                    <i className="mini-edge e2" />
-                    <i className="mini-edge e3" />
-                    <i className="mini-edge e4" />
-                    <b>S</b>
-                    <span>A</span>
+                  <div className="mini-circle">
+                    <i className="mini-circle-shape" />
+                    <i className="mini-tangent mini-tangent-one" />
+                    <i className="mini-tangent mini-tangent-two" />
+                    <b>A</b>
+                    <span>O</span>
                     <em>B</em>
+                    <small>C</small>
                   </div>
                   <span className="crop-label">Ảnh crop gốc · PNG</span>
                 </div>
@@ -650,44 +637,6 @@ function ReviewWorkspace({
             ) : (
               <div className="empty-state">Chưa phát hiện vùng hình ảnh.</div>
             )}
-
-            <div className="divider" />
-            <div className="enhance-heading">
-              <div>
-                <span className="feature-icon">
-                  <Sparkles size={16} />
-                </span>
-                <div>
-                  <strong>Làm nét trước OCR</strong>
-                  <small>Không thay đổi ảnh gốc</small>
-                </div>
-              </div>
-              <span className="safe-tag">
-                <ShieldCheck size={13} />
-                An toàn công thức
-              </span>
-            </div>
-            <div className="segmented-control" aria-label="Mức làm nét">
-              {[
-                ["NONE", "Gốc"],
-                ["LIGHT", "Nhẹ"],
-                ["MEDIUM", "Vừa"],
-                ["STRONG", "Mạnh"],
-              ].map(([value, label]) => (
-                <button
-                  type="button"
-                  className={sharpen === value ? "is-active" : ""}
-                  key={value}
-                  onClick={() => setSharpen(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="helper-copy">
-              Bản tăng cường chỉ dùng để nhận diện. Hình xuất đề vẫn lấy từ ảnh
-              gốc, trừ khi bạn chọn khác.
-            </p>
 
             <div className="review-checklist">
               <p>Kiểm tra nhanh</p>
@@ -885,6 +834,7 @@ function ExamView({
   onNotice: (message: string) => void;
 }) {
   const [title, setTitle] = useState("Đề luyện tập cuối học kỳ II");
+  const [grade, setGrade] = useState(9);
   const [duration, setDuration] = useState(90);
   const [matrix, setMatrix] = useState<Record<Difficulty, number>>({
     BIET: 2,
@@ -906,6 +856,7 @@ function ExamView({
           title,
           duration,
           totalQuestions: total,
+          grade,
           difficulty: matrix,
         }),
       });
@@ -946,10 +897,14 @@ function ExamView({
             </label>
             <label className="field-group">
               <span>Khối lớp</span>
-              <select defaultValue="12">
-                <option value="12">Lớp 12</option>
-                <option value="11">Lớp 11</option>
-                <option value="10">Lớp 10</option>
+              <select
+                value={grade}
+                onChange={(event) => setGrade(Number(event.target.value))}
+              >
+                <option value="9">Lớp 9</option>
+                <option value="8">Lớp 8</option>
+                <option value="7">Lớp 7</option>
+                <option value="6">Lớp 6</option>
               </select>
             </label>
             <label className="field-group">
@@ -1157,6 +1112,313 @@ function IllustrationScene({ spec }: { spec: IllustrationSpec }) {
       </div>
       <p>{spec.caption}</p>
     </div>
+  );
+}
+
+type EnhanceLevel = "LIGHT" | "MEDIUM" | "STRONG";
+
+const enhanceMeta: Record<
+  EnhanceLevel,
+  { label: string; description: string; strength: number; contrast: number }
+> = {
+  LIGHT: {
+    label: "Nhẹ",
+    description: "Ảnh chụp rõ, chỉ cần tăng viền chữ",
+    strength: 0.16,
+    contrast: 1.05,
+  },
+  MEDIUM: {
+    label: "Vừa",
+    description: "Cân bằng cho đề in và ảnh điện thoại",
+    strength: 0.32,
+    contrast: 1.1,
+  },
+  STRONG: {
+    label: "Mạnh",
+    description: "Bản scan mờ hoặc chữ có độ tương phản thấp",
+    strength: 0.5,
+    contrast: 1.16,
+  },
+};
+
+async function enhanceImage(file: File, level: EnhanceLevel) {
+  const bitmap = await createImageBitmap(file);
+  const maxDimension = 2200;
+  const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Trình duyệt không hỗ trợ xử lý ảnh.");
+
+  context.filter = `contrast(${enhanceMeta[level].contrast}) grayscale(.08)`;
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  context.filter = "none";
+
+  const imageData = context.getImageData(0, 0, width, height);
+  const source = new Uint8ClampedArray(imageData.data);
+  const output = imageData.data;
+  const strength = enhanceMeta[level].strength;
+  const row = width * 4;
+
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const index = y * row + x * 4;
+      for (let channel = 0; channel < 3; channel += 1) {
+        const center = source[index + channel];
+        const neighbors =
+          source[index - 4 + channel] +
+          source[index + 4 + channel] +
+          source[index - row + channel] +
+          source[index + row + channel];
+        output[index + channel] = Math.max(
+          0,
+          Math.min(255, center * (1 + 4 * strength) - neighbors * strength),
+        );
+      }
+    }
+  }
+  context.putImageData(imageData, 0, 0);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/png", 0.96),
+  );
+  if (!blob) throw new Error("Không thể xuất ảnh đã làm nét.");
+  return { blob, width, height };
+}
+
+function EnhanceView({
+  onNotice,
+  onSendToOcr,
+}: {
+  onNotice: (message: string) => void;
+  onSendToOcr: (file: File) => Promise<void>;
+}) {
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<string | null>(null);
+  const [enhancedFile, setEnhancedFile] = useState<File | null>(null);
+  const [enhancedPreview, setEnhancedPreview] = useState<string | null>(null);
+  const [level, setLevel] = useState<EnhanceLevel>("MEDIUM");
+  const [dimensions, setDimensions] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const sourceUrl = useRef<string | null>(null);
+  const enhancedUrl = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      if (sourceUrl.current) URL.revokeObjectURL(sourceUrl.current);
+      if (enhancedUrl.current) URL.revokeObjectURL(enhancedUrl.current);
+    },
+    [],
+  );
+
+  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (sourceUrl.current) URL.revokeObjectURL(sourceUrl.current);
+    if (enhancedUrl.current) URL.revokeObjectURL(enhancedUrl.current);
+    sourceUrl.current = URL.createObjectURL(file);
+    enhancedUrl.current = null;
+    setSourceFile(file);
+    setSourcePreview(sourceUrl.current);
+    setEnhancedFile(null);
+    setEnhancedPreview(null);
+    setDimensions("");
+    onNotice(`Đã chọn ${file.name} · ảnh gốc được giữ nguyên.`);
+  }
+
+  async function runEnhancement() {
+    if (!sourceFile) {
+      fileInput.current?.click();
+      return;
+    }
+    setProcessing(true);
+    try {
+      const result = await enhanceImage(sourceFile, level);
+      const baseName = sourceFile.name.replace(/\.[^.]+$/, "");
+      const output = new File([result.blob], `${baseName}-lam-net.png`, {
+        type: "image/png",
+      });
+      if (enhancedUrl.current) URL.revokeObjectURL(enhancedUrl.current);
+      enhancedUrl.current = URL.createObjectURL(output);
+      setEnhancedFile(output);
+      setEnhancedPreview(enhancedUrl.current);
+      setDimensions(`${result.width} × ${result.height} px`);
+      onNotice(`Đã làm nét ở mức ${enhanceMeta[level].label}; ảnh gốc không đổi.`);
+    } catch (error) {
+      onNotice(error instanceof Error ? error.message : "Không thể làm nét ảnh.");
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  return (
+    <main className="workspace">
+      <WorkspaceHeader
+        eyebrow="Studio ảnh / Công cụ độc lập"
+        title="Làm nét ảnh độc lập"
+        onUpload={() => fileInput.current?.click()}
+      />
+      <input
+        ref={fileInput}
+        className="visually-hidden"
+        type="file"
+        accept=".png,.jpg,.jpeg,.webp"
+        onChange={chooseFile}
+      />
+      <section className="enhance-layout">
+        <div className="enhance-controls content-card">
+          <div className="illustration-intro">
+            <span>
+              <Sparkles size={21} />
+            </span>
+            <div>
+              <p>Công cụ riêng · Không thuộc luồng OCR</p>
+              <h2>Tăng độ rõ cho ảnh đề</h2>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className={`enhance-dropzone ${sourceFile ? "has-file" : ""}`}
+            onClick={() => fileInput.current?.click()}
+          >
+            <span>
+              {sourceFile ? <CircleCheck size={23} /> : <UploadCloud size={23} />}
+            </span>
+            <strong>{sourceFile?.name ?? "Chọn ảnh PNG, JPG hoặc WebP"}</strong>
+            <small>
+              {sourceFile
+                ? `${formatFileSize(sourceFile.size)} · bấm để đổi ảnh`
+                : "Xử lý ngay trên thiết bị, không ghi đè tệp gốc"}
+            </small>
+          </button>
+
+          <div className="field-group">
+            <span>Mức làm nét</span>
+            <div className="segmented-control enhance-levels">
+              {(Object.keys(enhanceMeta) as EnhanceLevel[]).map((value) => (
+                <button
+                  type="button"
+                  className={level === value ? "is-active" : ""}
+                  key={value}
+                  onClick={() => setLevel(value)}
+                >
+                  {enhanceMeta[value].label}
+                </button>
+              ))}
+            </div>
+            <small>{enhanceMeta[level].description}</small>
+          </div>
+
+          <div className="safety-card">
+            <ShieldCheck size={19} />
+            <div>
+              <strong>Giữ nguyên bản gốc</strong>
+              <p>
+                Ảnh kết quả là một tệp PNG mới. Bạn có thể tải xuống hoặc chủ động
+                đưa bản này sang OCR.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="button button-primary button-large"
+            onClick={runEnhancement}
+            disabled={processing}
+          >
+            {processing ? <span className="spinner" /> : <Sparkles size={18} />}
+            {processing ? "Đang làm nét..." : "Làm nét ảnh"}
+            <ArrowRight size={17} />
+          </button>
+        </div>
+
+        <div className="enhance-comparison">
+          <div className="illustration-output-head">
+            <div>
+              <span className="mode-pill">
+                <ImageIcon size={13} />
+                So sánh trước / sau
+              </span>
+              <h2>{dimensions || "Bản xem trước"}</h2>
+            </div>
+            {enhancedFile && enhancedPreview ? (
+              <div className="toolbar-group">
+                <a
+                  className="icon-button"
+                  href={enhancedPreview}
+                  download={enhancedFile.name}
+                  aria-label="Tải ảnh đã làm nét"
+                  title="Tải ảnh đã làm nét"
+                >
+                  <Download size={17} />
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="comparison-grid">
+            <figure>
+              <figcaption>Ảnh gốc</figcaption>
+              {sourcePreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={sourcePreview} alt="Ảnh gốc trước khi làm nét" />
+              ) : (
+                <div className="comparison-empty">
+                  <ImageIcon size={34} />
+                  <span>Chọn ảnh để bắt đầu</span>
+                </div>
+              )}
+            </figure>
+            <figure>
+              <figcaption>Ảnh đã làm nét · {enhanceMeta[level].label}</figcaption>
+              {enhancedPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={enhancedPreview} alt="Ảnh sau khi làm nét" />
+              ) : (
+                <div className="comparison-empty">
+                  <Sparkles size={34} />
+                  <span>Kết quả mới sẽ xuất hiện ở đây</span>
+                </div>
+              )}
+            </figure>
+          </div>
+
+          <div className="enhance-actions">
+            <p>
+              <ShieldCheck size={15} />
+              Kiểm tra công thức và nét hình trước khi dùng bản đã xử lý.
+            </p>
+            <div>
+              {enhancedFile && enhancedPreview ? (
+                <a
+                  className="button button-quiet"
+                  href={enhancedPreview}
+                  download={enhancedFile.name}
+                >
+                  <Download size={16} />
+                  Tải PNG
+                </a>
+              ) : null}
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={!enhancedFile}
+                onClick={() => enhancedFile && void onSendToOcr(enhancedFile)}
+              >
+                <ScanLine size={16} />
+                Đưa sang OCR
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -1578,7 +1840,6 @@ export function MathOcrStudio() {
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [sharpen, setSharpen] = useState("MEDIUM");
   const [processingMode, setProcessingMode] = useState<string | null>("demo");
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -1610,8 +1871,11 @@ export function MathOcrStudio() {
   }
 
   useEffect(() => {
-    void loadOverview();
-    void loadKeys();
+    const timer = window.setTimeout(() => {
+      void loadOverview();
+      void loadKeys();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -1620,9 +1884,7 @@ export function MathOcrStudio() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function uploadForOcr(file: File) {
     if (selectedPreview) URL.revokeObjectURL(selectedPreview);
     const preview = URL.createObjectURL(file);
     setSelectedFile(file);
@@ -1633,7 +1895,7 @@ export function MathOcrStudio() {
     try {
       const form = new FormData();
       form.append("file", file);
-      form.append("sharpenProfile", sharpen);
+      form.append("sharpenProfile", "NONE");
       const response = await fetch("/api/upload", { method: "POST", body: form });
       const payload = (await response.json()) as {
         document?: { id: string };
@@ -1643,12 +1905,27 @@ export function MathOcrStudio() {
       setDocumentId(payload.document?.id ?? null);
       setNotice(`Đã tải ${file.name} · ${formatFileSize(file.size)}`);
       await loadOverview();
+      return true;
     } catch (error) {
       setNotice(
         error instanceof Error ? error.message : "Không thể tải tài liệu lên kho.",
       );
+      return false;
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) await uploadForOcr(file);
+  }
+
+  async function sendEnhancedToOcr(file: File) {
+    const uploaded = await uploadForOcr(file);
+    if (uploaded) {
+      setView("review");
+      setNotice("Ảnh đã làm nét đã được đưa sang Bàn xử lý. Sẵn sàng nhận diện.");
     }
   }
 
@@ -1704,8 +1981,6 @@ export function MathOcrStudio() {
           isUploading={isUploading}
           isProcessing={isProcessing}
           onProcess={processDocument}
-          sharpen={sharpen}
-          setSharpen={setSharpen}
           processingMode={processingMode}
         />
       ) : null}
@@ -1713,6 +1988,9 @@ export function MathOcrStudio() {
         <LibraryView questions={questions} onCreateExam={() => setView("exam")} />
       ) : null}
       {view === "exam" ? <ExamView questions={questions} onNotice={setNotice} /> : null}
+      {view === "enhance" ? (
+        <EnhanceView onNotice={setNotice} onSendToOcr={sendEnhancedToOcr} />
+      ) : null}
       {view === "illustration" ? <IllustrationView onNotice={setNotice} /> : null}
       {view === "settings" ? (
         <SettingsView
