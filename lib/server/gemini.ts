@@ -1,5 +1,6 @@
 import { decryptSecret } from "./crypto";
 import { ensureDatabase } from "./database";
+import { geminiErrorSummary } from "./gemini-error";
 
 type ApiKeyRow = {
   id: string;
@@ -117,10 +118,13 @@ export async function callGeminiStructured(input: GeminiCall) {
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(plainKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent`,
       {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": plainKey,
+        },
         body: JSON.stringify({
           contents: [{ role: "user", parts }],
           generationConfig: {
@@ -143,7 +147,7 @@ export async function callGeminiStructured(input: GeminiCall) {
       };
     }
 
-    lastError = `${response.status}: ${(await response.text()).slice(0, 240)}`;
+    lastError = `${response.status}: ${await geminiErrorSummary(response)}`;
     await markFailure(key, response.status);
     if (![429, 500, 503, 504].includes(response.status)) break;
   }

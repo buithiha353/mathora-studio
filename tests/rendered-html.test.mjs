@@ -54,7 +54,13 @@ test("pins OCR recognition to the stable Gemini 3.5 Flash model", async () => {
 
   assert.match(models, /gemini-3\.5-flash/);
   assert.match(processRoute, /model: OCR_MODEL_ID/);
-  assert.match(keysRoute, /models\/\$\{OCR_MODEL_ID\}/);
+  assert.match(keysRoute, /models\/\$\{OCR_MODEL_ID\}:generateContent/);
+  assert.match(keysRoute, /x-goog-api-key/);
+  assert.match(keysRoute, /geminiErrorSummary/);
+  assert.match(gemini, /x-goog-api-key/);
+  assert.match(gemini, /geminiErrorSummary/);
+  assert.doesNotMatch(keysRoute, /\?key=/);
+  assert.doesNotMatch(gemini, /\?key=/);
   assert.match(studio, /Nhận diện AI/);
   assert.doesNotMatch(gemini, /temperature|top_p|top_k/);
 });

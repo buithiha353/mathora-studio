@@ -10,6 +10,7 @@ Production: https://mathora-studio.nhatha-drive10.chatgpt.site
 
 - Current deployed version: 5
 - Current deployed source: `8d9ab1964d634fddce1d023caace790f0ee4191e`
+- Next validated version: 6 (pending deployment)
 
 ## Product rules
 
@@ -31,7 +32,7 @@ Production: https://mathora-studio.nhatha-drive10.chatgpt.site
 - Uploaded files: Cloudflare R2, declared as `FILES`.
 - Schema: `db/schema.ts`; generated migrations are in `drizzle/`.
 - Hosting configuration: `.openai/hosting.json`.
-- Gemini integration: REST `generateContent` through `lib/server/gemini.ts`.
+- Gemini integration: REST `generateContent` through `lib/server/gemini.ts`, authenticated with the `x-goog-api-key` header.
 - Gemini model constants: `lib/gemini-models.ts`.
 - Stored Gemini keys are encrypted; hosted secret values must never be written to this file.
 
@@ -39,7 +40,7 @@ Production: https://mathora-studio.nhatha-drive10.chatgpt.site
 
 1. Upload PDF, PNG, JPG, JPEG, or WebP source documents to R2.
 2. Recognize document metadata, THCS questions, LaTeX, knowledge topics, grades, difficulty, and normalized visual-region boxes with Gemini 3.5 Flash.
-3. Rotate healthy API keys by priority and usage; cooldown project keys on quota errors.
+3. Validate keys with a minimal real `generateContent` request, expose sanitized Google errors, rotate healthy keys by priority and usage, and preserve temporarily rate-limited keys for later rotation.
 4. Persist extracted questions and image regions as awaiting review.
 5. Let users review region labels/types/question links and edit question content, LaTeX, grade, topic, difficulty, and answer.
 6. Admit only confirmed questions to the library and only reviewed questions to exam generation.
@@ -97,3 +98,4 @@ Latest version passed:
 - 2026-07-28 — v4: Pinned OCR recognition to stable `gemini-3.6-flash`, upgraded key validation/defaults, and removed deprecated sampling parameters.
 - 2026-07-28 — Context workflow: Deployed v4 to production and added the authoritative `PROJECT_CONTEXT.md` workflow; no application behavior changed.
 - 2026-07-28 — v5: Changed OCR recognition and stored API-key model metadata to stable `gemini-3.5-flash`; deployed to production.
+- 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployment pending.

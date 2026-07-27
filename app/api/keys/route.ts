@@ -1,5 +1,6 @@
 import { encryptSecret } from "@/lib/server/crypto";
 import { ensureDatabase } from "@/lib/server/database";
+import { geminiErrorSummary } from "@/lib/server/gemini-error";
 import { OCR_MODEL_ID } from "@/lib/gemini-models";
 
 type KeyPayload = {
@@ -49,15 +50,39 @@ export async function POST(request: Request) {
     }
 
     const test = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${OCR_MODEL_ID}?key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${OCR_MODEL_ID}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: "Reply with exactly: OK" }],
+            },
+          ],
+        }),
+      },
     );
-    if (!test.ok) {
+    const canSaveAfterTemporaryFailure = [429, 500, 503, 504].includes(
+      test.status,
+    );
+    let warning: string | undefined;
+    if (!test.ok && !canSaveAfterTemporaryFailure) {
+      const detail = await geminiErrorSummary(test);
       return Response.json(
         {
-          error: `API key chưa truy cập được ${OCR_MODEL_ID} (${test.status}).`,
+          error: `Không thể dùng ${OCR_MODEL_ID}. Google trả về ${test.status}: ${detail}`,
         },
         { status: 400 },
       );
+    }
+    if (!test.ok) {
+      const detail = await geminiErrorSummary(test);
+      warning = `Key đã được lưu, nhưng Google đang tạm giới hạn dịch vụ (${test.status}: ${detail}).`;
     }
 
     const encrypted = await encryptSecret(apiKey);
@@ -94,6 +119,7 @@ export async function POST(request: Request) {
           usageCount: 0,
           status: "ACTIVE",
         },
+        warning,
       },
       { status: 201 },
     );

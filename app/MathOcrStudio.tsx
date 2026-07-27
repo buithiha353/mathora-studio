@@ -1972,13 +1972,16 @@ function SettingsView({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ label, projectId, apiKey, model, priority }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as {
+        error?: string;
+        warning?: string;
+      };
       if (!response.ok) throw new Error(payload.error);
       setLabel("");
       setProjectId("");
       setApiKey("");
       await refreshKeys();
-      onNotice("API key đã được kiểm tra và mã hóa.");
+      onNotice(payload.warning ?? "API key đã được kiểm tra và mã hóa.");
     } catch (error) {
       onNotice(error instanceof Error ? error.message : "Không thể lưu API key.");
     } finally {
