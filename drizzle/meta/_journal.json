@@ -22,6 +22,13 @@
       "when": 1785192512066,
       "tag": "0002_worried_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785193143923,
+      "tag": "0003_minor_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { encryptSecret } from "@/lib/server/crypto";
 import { ensureDatabase } from "@/lib/server/database";
+import { OCR_MODEL_ID } from "@/lib/gemini-models";
 
 type KeyPayload = {
   label?: string;
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     const label = payload.label?.trim() ?? "";
     const projectId = payload.projectId?.trim() ?? "";
     const apiKey = payload.apiKey?.trim() ?? "";
-    const model = payload.model?.trim() || "gemini-2.5-flash";
+    const model = OCR_MODEL_ID;
     const priority = Math.max(1, Math.min(10, Number(payload.priority ?? 1)));
 
     if (!label || !projectId || apiKey.length < 20) {
@@ -48,11 +49,13 @@ export async function POST(request: Request) {
     }
 
     const test = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${OCR_MODEL_ID}?key=${encodeURIComponent(apiKey)}`,
     );
     if (!test.ok) {
       return Response.json(
-        { error: `Không thể xác thực key (${test.status}).` },
+        {
+          error: `API key chưa truy cập được ${OCR_MODEL_ID} (${test.status}).`,
+        },
         { status: 400 },
       );
     }

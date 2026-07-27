@@ -53,6 +53,7 @@ import {
   useState,
 } from "react";
 import { demoIllustrationSpec, demoOcrResult } from "@/lib/demo-data";
+import { OCR_MODEL_ID, OCR_MODEL_LABEL } from "@/lib/gemini-models";
 
 type View =
   | "review"
@@ -151,7 +152,7 @@ const difficultyMeta: Record<
 
 const stepLabels = [
   "Tải lên",
-  "Nhận diện",
+  "Nhận diện AI",
   "Duyệt vùng",
   "Kiểm tra nội dung",
   "Thư viện",
@@ -620,7 +621,11 @@ function ReviewWorkspace({
         <div className="process-meta">
           <span className={`mode-pill ${processingMode === "gemini" ? "live" : ""}`}>
             <Sparkles size={13} />
-            {processingMode === "gemini" ? "Gemini thật" : "Bản mẫu an toàn"}
+            {processingMode === "gemini"
+              ? OCR_MODEL_LABEL
+              : processingMode === "demo"
+                ? "Bản mẫu an toàn"
+                : `${OCR_MODEL_LABEL} sẵn sàng`}
           </span>
           <span>{result.document.pages} trang</span>
           <span>{result.questions.length} câu</span>
@@ -1954,7 +1959,7 @@ function SettingsView({
   const [label, setLabel] = useState("");
   const [projectId, setProjectId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("gemini-2.5-flash");
+  const [model, setModel] = useState(OCR_MODEL_ID);
   const [priority, setPriority] = useState(5);
   const [saving, setSaving] = useState(false);
 
@@ -2113,11 +2118,11 @@ function SettingsView({
                 </div>
               </label>
               <label className="field-group">
-                <span>Model mặc định</span>
+                <span>Model nhận diện đề</span>
                 <select value={model} onChange={(event) => setModel(event.target.value)}>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value={OCR_MODEL_ID}>{OCR_MODEL_LABEL}</option>
                 </select>
+                <small>Model ổn định được ghim riêng cho bước nhận diện OCR.</small>
               </label>
               <label className="field-group">
                 <span>Độ ưu tiên: {priority}</span>

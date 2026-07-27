@@ -43,6 +43,22 @@ test("requires human review before questions can enter exams", async () => {
   assert.doesNotMatch(examRoute, /AWAITING_REVIEW/);
 });
 
+test("pins OCR recognition to the stable Gemini 3.6 Flash model", async () => {
+  const [models, gemini, processRoute, keysRoute, studio] = await Promise.all([
+    readFile(new URL("../lib/gemini-models.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/gemini.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/keys/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(models, /gemini-3\.6-flash/);
+  assert.match(processRoute, /model: OCR_MODEL_ID/);
+  assert.match(keysRoute, /models\/\$\{OCR_MODEL_ID\}/);
+  assert.match(studio, /Nhận diện AI/);
+  assert.doesNotMatch(gemini, /temperature|top_p|top_k/);
+});
+
 test("removes starter preview and declares persistent bindings", async () => {
   const [hosting, page, layout, packageJson] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),

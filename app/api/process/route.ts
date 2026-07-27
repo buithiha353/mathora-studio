@@ -1,4 +1,5 @@
 import { demoOcrResult } from "@/lib/demo-data";
+import { OCR_MODEL_ID } from "@/lib/gemini-models";
 import { requireFiles } from "@/lib/server/bindings";
 import { ensureDatabase } from "@/lib/server/database";
 import {
@@ -155,6 +156,7 @@ export async function POST(request: Request) {
 
     try {
       const response = await callGeminiStructured({
+        model: OCR_MODEL_ID,
         mimeType: document.mimeType,
         data: base64,
         schema: ocrSchema,

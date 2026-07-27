@@ -11,6 +11,7 @@ type ApiKeyRow = {
 
 type GeminiCall = {
   prompt: string;
+  model?: string;
   mimeType?: string;
   data?: string;
   schema?: Record<string, unknown>;
@@ -107,6 +108,7 @@ export async function callGeminiStructured(input: GeminiCall) {
     triedProjects.add(key.project_id);
 
     const plainKey = await decryptSecret(key.cipher_text, key.iv);
+    const activeModel = input.model ?? key.model;
     const parts: Array<Record<string, unknown>> = [{ text: input.prompt }];
     if (input.mimeType && input.data) {
       parts.unshift({
@@ -115,14 +117,13 @@ export async function callGeminiStructured(input: GeminiCall) {
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(key.model)}:generateContent?key=${encodeURIComponent(plainKey)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(activeModel)}:generateContent?key=${encodeURIComponent(plainKey)}`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts }],
           generationConfig: {
-            temperature: 0.1,
             responseMimeType: "application/json",
             ...(input.schema ? { responseSchema: input.schema } : {}),
           },
@@ -138,7 +139,7 @@ export async function callGeminiStructured(input: GeminiCall) {
       return {
         data: JSON.parse(text) as Record<string, unknown>,
         keyId: key.id,
-        model: key.model,
+        model: activeModel,
       };
     }
 
