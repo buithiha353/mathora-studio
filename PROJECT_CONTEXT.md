@@ -8,9 +8,8 @@ Mathora Studio is a Vietnamese web application for OCR and managing lower-second
 
 Production: https://mathora-studio.nhatha-drive10.chatgpt.site
 
-- Current deployed version: 5
-- Current deployed source: `8d9ab1964d634fddce1d023caace790f0ee4191e`
-- Next validated version: 6 (pending deployment)
+- Current deployed version: 6
+- Current deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
 
@@ -98,4 +97,4 @@ Latest version passed:
 - 2026-07-28 — v4: Pinned OCR recognition to stable `gemini-3.6-flash`, upgraded key validation/defaults, and removed deprecated sampling parameters.
 - 2026-07-28 — Context workflow: Deployed v4 to production and added the authoritative `PROJECT_CONTEXT.md` workflow; no application behavior changed.
 - 2026-07-28 — v5: Changed OCR recognition and stored API-key model metadata to stable `gemini-3.5-flash`; deployed to production.
-- 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployment pending.
+- 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployed to production.
