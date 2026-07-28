@@ -10,7 +10,7 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 7
+- Current deployed version: 8
 - Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
@@ -86,6 +86,10 @@ Latest version passed:
 - production build;
 - self-hosted standalone build and local smoke test;
 - public cPanel deployment smoke test for the page and overview API;
+- all six production CSS/JavaScript assets returning HTTP 200 with correct
+  content types under `/thuviendethi/assets/`;
+- production browser visual check and hydrated navigation check with no console
+  errors;
 - TypeScript check;
 - ESLint;
 - four application tests, including the human-review gate and Gemini 3.5 Flash pin.
@@ -114,3 +118,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — GitHub publication: Published the complete tracked source and history to the private `buithiha353/mathora-studio` repository; generated ZIP exports remain local only.
 - 2026-07-28 — Plan rewrite: Added the authoritative Vietnamese product plan and explicitly separated image sharpening and illustration generation from the OCR workflow.
 - 2026-07-28 — v7: Added a Node.js self-hosted target with `/thuviendethi` base path, SQLite/local-file adapters, a 50 MB request limit, and deployed it to `minhkhue.one` on cPanel Node.js 24.
+- 2026-07-28 — v8: Fixed Vinext App Router standalone asset routing under the cPanel `/thuviendethi` mount, normalized packaged static-cache paths across Windows/Linux, and redeployed the fully styled interface.

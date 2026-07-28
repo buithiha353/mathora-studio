@@ -52,6 +52,7 @@ export default defineConfig(async () => {
       });
 
   return {
+    base: selfHosted ? "/thuviendethi/" : undefined,
     define: {
       "process.env.MATHORA_SELF_HOSTED": JSON.stringify(
         selfHosted ? "1" : "0",
