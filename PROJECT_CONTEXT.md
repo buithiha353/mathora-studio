@@ -6,11 +6,12 @@ Last updated: 2026-07-28 (Asia/Saigon)
 
 Mathora Studio is a Vietnamese web application for OCR and managing lower-secondary mathematics exams (THCS, grades 6–9). It preserves formulas and visual regions, requires human review before questions enter the library, generates exams from a difficulty matrix, manages rotating Gemini API keys, sharpens images in a separate tool, and creates 2D textbook-style illustrations.
 
-Production: https://mathora-studio.nhatha-drive10.chatgpt.site
+Primary production: https://minhkhue.one/thuviendethi/
+Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 6
-- Current deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
+- Current deployed version: 7
+- Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
 
@@ -33,6 +34,10 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 - Uploaded files: Cloudflare R2, declared as `FILES`.
 - Schema: `db/schema.ts`; generated migrations are in `drizzle/`.
 - Hosting configuration: `.openai/hosting.json`.
+- Self-hosted mode: Vinext standalone on Node.js 24 with base path
+  `/thuviendethi`, built by `npm run build:self-hosted`.
+- Self-hosted persistence: Node built-in SQLite under `MATHORA_DATA_DIR`
+  and uploaded files under `MATHORA_UPLOAD_DIR`.
 - Gemini integration: REST `generateContent` through `lib/server/gemini.ts`, authenticated with the `x-goog-api-key` header.
 - Gemini model constants: `lib/gemini-models.ts`.
 - Stored Gemini keys are encrypted; hosted secret values must never be written to this file.
@@ -79,9 +84,15 @@ Document status flow: `UPLOADED` → `REGION_REVIEW` → `COMPLETED`.
 Latest version passed:
 
 - production build;
+- self-hosted standalone build and local smoke test;
+- public cPanel deployment smoke test for the page and overview API;
 - TypeScript check;
 - ESLint;
 - four application tests, including the human-review gate and Gemini 3.5 Flash pin.
+
+The new self-hosted database has no active Gemini key yet. A key must be added
+again through Settings before a real Gemini request can be verified from the
+Vietnam-hosted backend.
 
 ## Next work
 
@@ -102,3 +113,4 @@ Latest version passed:
 - 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployed to production.
 - 2026-07-28 — GitHub publication: Published the complete tracked source and history to the private `buithiha353/mathora-studio` repository; generated ZIP exports remain local only.
 - 2026-07-28 — Plan rewrite: Added the authoritative Vietnamese product plan and explicitly separated image sharpening and illustration generation from the OCR workflow.
+- 2026-07-28 — v7: Added a Node.js self-hosted target with `/thuviendethi` base path, SQLite/local-file adapters, a 50 MB request limit, and deployed it to `minhkhue.one` on cPanel Node.js 24.

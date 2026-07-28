@@ -55,6 +55,8 @@ import {
 import { demoIllustrationSpec, demoOcrResult } from "@/lib/demo-data";
 import { OCR_MODEL_ID, OCR_MODEL_LABEL } from "@/lib/gemini-models";
 
+const API_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 type View =
   | "review"
   | "library"
@@ -1206,7 +1208,7 @@ function ExamView({
   async function generate() {
     setLoading(true);
     try {
-      const response = await fetch("/api/exams", {
+      const response = await fetch(`${API_BASE_PATH}/api/exams`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1792,7 +1794,7 @@ function IllustrationView({ onNotice }: { onNotice: (message: string) => void })
   async function generateIllustration() {
     setLoading(true);
     try {
-      const response = await fetch("/api/illustrations", {
+      const response = await fetch(`${API_BASE_PATH}/api/illustrations`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ problem, mode, purpose }),
@@ -1967,7 +1969,7 @@ function SettingsView({
     event.preventDefault();
     setSaving(true);
     try {
-      const response = await fetch("/api/keys", {
+      const response = await fetch(`${API_BASE_PATH}/api/keys`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ label, projectId, apiKey, model, priority }),
@@ -1990,7 +1992,7 @@ function SettingsView({
   }
 
   async function deleteKey(id: string) {
-    const response = await fetch("/api/keys", {
+    const response = await fetch(`${API_BASE_PATH}/api/keys`, {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ id }),
@@ -2214,7 +2216,7 @@ export function MathOcrStudio() {
 
   async function loadOverview() {
     try {
-      const response = await fetch("/api/overview");
+      const response = await fetch(`${API_BASE_PATH}/api/overview`);
       if (!response.ok) return;
       const payload = (await response.json()) as typeof initialOverview;
       setOverview(payload);
@@ -2225,7 +2227,7 @@ export function MathOcrStudio() {
 
   async function loadKeys() {
     try {
-      const response = await fetch("/api/keys");
+      const response = await fetch(`${API_BASE_PATH}/api/keys`);
       if (!response.ok) return;
       const payload = (await response.json()) as { keys: ApiKeyItem[] };
       setKeys(payload.keys);
@@ -2263,7 +2265,10 @@ export function MathOcrStudio() {
       const form = new FormData();
       form.append("file", file);
       form.append("sharpenProfile", "NONE");
-      const response = await fetch("/api/upload", { method: "POST", body: form });
+      const response = await fetch(`${API_BASE_PATH}/api/upload`, {
+        method: "POST",
+        body: form,
+      });
       const payload = (await response.json()) as {
         document?: { id: string };
         error?: string;
@@ -2301,7 +2306,7 @@ export function MathOcrStudio() {
     if (!documentId) return;
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/process", {
+      const response = await fetch(`${API_BASE_PATH}/api/process`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ documentId }),
@@ -2337,7 +2342,7 @@ export function MathOcrStudio() {
     if (!documentId) return;
     setIsSaving(true);
     try {
-      const response = await fetch("/api/review", {
+      const response = await fetch(`${API_BASE_PATH}/api/review`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

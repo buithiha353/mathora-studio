@@ -1,5 +1,3 @@
-import { env } from "cloudflare:workers";
-
 export interface D1PreparedLike {
   bind(...values: unknown[]): D1PreparedLike;
   run(): Promise<unknown>;
@@ -32,8 +30,13 @@ type RuntimeBindings = {
   APP_ENCRYPTION_KEY?: string;
 };
 
+const runtimeBindings: RuntimeBindings =
+  process.env.MATHORA_SELF_HOSTED === "1"
+    ? (await import("./node-bindings")).createNodeBindings()
+    : ((await import("cloudflare:workers")).env as unknown as RuntimeBindings);
+
 export function getBindings() {
-  return env as unknown as RuntimeBindings;
+  return runtimeBindings;
 }
 
 export function requireDb() {
