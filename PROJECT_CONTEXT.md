@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 8
-- Current code version: 9 (not yet deployed)
+- Current code version: 10 (not yet deployed)
 - Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
@@ -25,7 +25,10 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 - Illustration generation uses the authoritative Vietnamese THCS textbook
   prompt in `lib/illustration-prompt.ts`: clean 2D technical drawing, white
   background, restrained colors, exact geometric notation, minimal real-world
-  objects, no decorative scene, and no text beyond mathematical labels/data.
+  objects, no unrelated decorative scene, and no text beyond mathematical
+  labels/data or essential short context labels. Related visual accents such as
+  light water color, sparse waves, and a simple boat are allowed when they
+  improve recognition without competing with the geometry.
 - OCR recognition is pinned to the stable model `gemini-3.5-flash`.
 
 ## Architecture
@@ -126,3 +129,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — v7: Added a Node.js self-hosted target with `/thuviendethi` base path, SQLite/local-file adapters, a 50 MB request limit, and deployed it to `minhkhue.one` on cPanel Node.js 24.
 - 2026-07-28 — v8: Fixed Vinext App Router standalone asset routing under the cPanel `/thuviendethi` mount, normalized packaged static-cache paths across Windows/Linux, and redeployed the fully styled interface.
 - 2026-07-28 — v9 (not deployed): Added the authoritative THCS textbook illustration prompt, including strict 2D style, geometry, notation, color, layout, real-world simplification, print-quality, source-verification, and answer-hiding rules.
+- 2026-07-28 — v10 (not deployed): Added a corrected river-crossing few-shot example from the supplied reference, allowing restrained contextual aesthetics while explicitly keeping AC as the unknown boat path and preventing blind copying of AB's misplaced question mark.

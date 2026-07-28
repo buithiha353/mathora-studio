@@ -47,8 +47,13 @@ Ví dụ:
 - Nhà → hình chữ nhật + mái tam giác.
 - Người → hình que hoặc silhouette đơn giản.
 - Xe → biểu tượng đơn giản.
+- Sông → vùng nước xanh nhạt + hai đường bờ + một vài gợn sóng đơn giản.
+- Thuyền → biểu tượng thuyền nhỏ, tối giản, đặt đúng tại vị trí xuất phát hoặc trên đường chuyển động.
 - Không vẽ chi tiết khuôn mặt.
-- Không trang trí.
+- Không trang trí bằng chi tiết không liên quan đến bối cảnh bài toán.
+- Được thêm một số chi tiết bối cảnh tối giản như gợn sóng, mặt nước,
+  thân cây hoặc mái nhà khi chúng giúp nhận biết đúng đối tượng thực tế và
+  không che, làm lệch hoặc cạnh tranh với dữ kiện toán học.
 
 • Bố cục:
 - Chỉ chứa các đối tượng phục vụ bài toán.
@@ -72,6 +77,8 @@ Chỉ hiển thị:
 Không thêm tiêu đề.
 Không thêm chú thích.
 Không thêm mô tả.
+- Chỉ được thêm nhãn bối cảnh rất ngắn như “Bờ sông” khi nhãn đó thực sự
+  cần thiết để người học hiểu hình.
 
 • Chất lượng:
 - Độ phân giải cao.
@@ -79,7 +86,29 @@ Không thêm mô tả.
 - Có thể in trực tiếp vào đề kiểm tra.
 
 Quan trọng nhất:
-Hình phải ưu tiên tính chính xác hình học hơn tính đẹp mắt, giống hình minh họa trong sách giáo khoa Toán THCS hiện hành.`;
+Hình phải ưu tiên tính chính xác hình học hơn tính đẹp mắt, giống hình minh họa trong sách giáo khoa Toán THCS hiện hành.
+
+• Ví dụ mẫu cần học về phong cách và bố cục:
+Bài toán: “Một con thuyền đi qua con sông rộng 120 m. Hướng chuyển động của
+thuyền tạo với bờ sông một góc 30°. Tính độ dài quãng đường thuyền đi được.”
+
+Hình minh họa phù hợp:
+- Dùng nền trắng; phần mặt nước là một vùng xanh lam rất nhạt.
+- Vẽ hai bờ sông bằng hai đường thẳng song song nằm ngang, có thể tô nâu nhạt.
+- Thêm 3–6 gợn sóng xanh mảnh, phân bố thưa để gợi bối cảnh sông.
+- Vẽ một chiếc thuyền nâu nhỏ, tối giản tại điểm xuất phát A.
+- Dựng tam giác vuông ABC: A là điểm xuất phát, C là điểm đến ở bờ đối diện,
+  B là chân đường vuông góc từ C xuống bờ gần.
+- Vẽ AC là đường chuyển động của thuyền; đánh dấu AC bằng x hoặc ? vì đây là
+  quãng đường cần tìm.
+- Vẽ BC vuông góc với hai bờ sông, dùng nét đứt nếu cần, ghi BC = 120 m và
+  đặt ký hiệu góc vuông tại B.
+- Đánh dấu góc BAC = 30° bằng một cung góc rõ ràng.
+- Có thể ghi “Bờ sông” cạnh mỗi bờ, nhưng không thêm tiêu đề hay đoạn mô tả.
+- Không đặt dấu ? trên AB vì AB không phải quãng đường thuyền đi trong bài toán này.
+
+Chỉ học nguyên tắc bố cục, mức độ tối giản và cách phối màu từ ví dụ; không
+sao chép máy móc nếu dữ kiện hoặc quan hệ hình học của bài toán mới khác đi.`;
 
 type IllustrationPromptInput = {
   problem: string;

@@ -78,6 +78,12 @@ test("applies the THCS textbook illustration prompt", async () => {
   assert.match(illustrationPrompt, /Không hiệu ứng 3D/);
   assert.match(illustrationPrompt, /Góc vuông phải có ký hiệu/);
   assert.match(illustrationPrompt, /Chỉ sử dụng 2–4 màu nhạt/);
+  assert.match(illustrationPrompt, /gợn sóng/);
+  assert.match(illustrationPrompt, /chiếc thuyền nâu nhỏ/);
+  assert.match(illustrationPrompt, /tam giác vuông ABC/);
+  assert.match(illustrationPrompt, /AC là đường chuyển động của thuyền/);
+  assert.match(illustrationPrompt, /Không đặt dấu \? trên AB/);
+  assert.match(illustrationPrompt, /không\s+sao chép máy móc/);
   assert.match(illustrationPrompt, /không để lộ đáp án/);
   assert.match(illustrationPrompt, /caption chỉ dùng làm metadata nội bộ/);
   assert.match(illustrationRoute, /buildIllustrationPrompt/);
