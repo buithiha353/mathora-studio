@@ -16,6 +16,8 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 ## Product rules
 
+- Every completed application version must be deployed after validation unless
+  the user explicitly requests a local-only or not-yet-deployed version.
 - Mathematics scope is THCS only: grades 6, 7, 8, and 9.
 - OCR must preserve formulas, image regions, and question order.
 - Document processing first creates a page-level Layout Map without OCR:
