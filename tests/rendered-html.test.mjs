@@ -165,6 +165,44 @@ test("supports question details, grade filtering, and exam regeneration", async 
   assert.match(examRoute, /ORDER BY RANDOM\(\)/);
 });
 
+test("attaches confirmed source images to library questions and exams", async () => {
+  const [overviewRoute, examRoute, regionImageRoute, studio] = await Promise.all([
+    readFile(new URL("../app/api/overview/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/exams/route.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/api/region-image/route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(overviewRoute, /FROM image_regions/);
+  assert.match(overviewRoute, /status = 'CONFIRMED'/);
+  assert.match(overviewRoute, /sourceUrl/);
+  assert.match(examRoute, /finalQuestionsWithAssets/);
+  assert.match(regionImageRoute, /JOIN documents/);
+  assert.match(regionImageRoute, /requireFiles\(\)\.get/);
+  assert.match(studio, /Hình đi kèm/);
+  assert.match(studio, /selectedQuestion\.assets/);
+});
+
+test("exports generated exams to Word with formulas and cropped images", async () => {
+  const [studio, wordBuilder, packageJson] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/exam-docx.ts", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(packageJson, /"docx"/);
+  assert.match(studio, /cropQuestionAsset/);
+  assert.match(studio, /packExamDocument/);
+  assert.match(studio, /Tải Word \(\.docx\)/);
+  assert.match(studio, /link\.download = `\$\{safeName\}\.docx`/);
+  assert.match(wordBuilder, /new ImageRun/);
+  assert.match(wordBuilder, /Cambria Math/);
+  assert.match(wordBuilder, /Packer\.toBlob/);
+});
+
 test("applies the THCS textbook illustration prompt", async () => {
   const [illustrationPrompt, illustrationRoute] = await Promise.all([
     readFile(new URL("../lib/illustration-prompt.ts", import.meta.url), "utf8"),

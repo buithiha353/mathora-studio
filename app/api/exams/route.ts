@@ -46,6 +46,47 @@ export async function POST(request: Request) {
     }
 
     const finalQuestions = selected.slice(0, totalQuestions);
+    const selectedIds = finalQuestions.map((question) => String(question.id));
+    const regions =
+      selectedIds.length > 0
+        ? await db
+            .prepare(
+              `SELECT id, question_id AS questionId, label,
+                      region_type AS regionType, box_json AS boxJson,
+                      page_number AS page
+               FROM image_regions
+               WHERE status = 'CONFIRMED'
+                 AND question_id IN (${selectedIds.map(() => "?").join(",")})
+               ORDER BY created_at ASC`,
+            )
+            .bind(...selectedIds)
+            .all<Record<string, unknown>>()
+        : { results: [] };
+    const assetsByQuestion = new Map<string, Record<string, unknown>[]>();
+    for (const region of regions.results) {
+      const questionId = String(region.questionId ?? "");
+      const asset = {
+        id: String(region.id),
+        label: String(region.label),
+        regionType: String(region.regionType),
+        box: JSON.parse(String(region.boxJson ?? "[]")),
+        page: Math.max(1, Number(region.page) || 1),
+        sourceUrl: `/api/region-image?regionId=${encodeURIComponent(String(region.id))}`,
+      };
+      assetsByQuestion.set(questionId, [
+        ...(assetsByQuestion.get(questionId) ?? []),
+        asset,
+      ]);
+    }
+    const finalQuestionsWithAssets = finalQuestions.map((question) => {
+      const assets = assetsByQuestion.get(String(question.id)) ?? [];
+      return {
+        ...question,
+        id: String(question.id),
+        assetCount: assets.length,
+        assets,
+      };
+    });
     const id = crypto.randomUUID();
     const title = payload.title?.trim() || "Đề luyện tập Toán";
     const duration = Math.max(15, Math.min(240, Number(payload.duration ?? 90)));
@@ -59,14 +100,14 @@ export async function POST(request: Request) {
         id,
         title,
         duration,
-        finalQuestions.length,
+        finalQuestionsWithAssets.length,
         JSON.stringify(requested),
-        JSON.stringify(finalQuestions.map((question) => question.id)),
+        JSON.stringify(finalQuestionsWithAssets.map((question) => question.id)),
       )
       .run();
 
     return Response.json({
-      exam: { id, title, duration, questions: finalQuestions },
+      exam: { id, title, duration, questions: finalQuestionsWithAssets },
     });
   } catch (error) {
     return Response.json(

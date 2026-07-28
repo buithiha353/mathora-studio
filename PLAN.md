@@ -93,6 +93,8 @@ trong quy trình OCR.
 
 - Lưu mỗi câu hỏi thành một bản ghi độc lập.
 - Giữ liên kết với tài liệu nguồn và các vùng ảnh đã xác nhận.
+- Khi xem chi tiết, crop và hiển thị các vùng ảnh đã xác nhận trực tiếp từ đúng
+  trang nguồn của câu hỏi.
 - Hỗ trợ xem chi tiết từng câu, tìm kiếm, lọc theo lớp và độ khó, chỉnh sửa,
   gắn thẻ và phát hiện câu trùng lặp.
 - Có lịch sử thay đổi và khả năng mở lại phiên duyệt.
@@ -121,7 +123,8 @@ khác theo cùng cấu hình.
 - Chèn lại ảnh đúng câu hỏi và đúng thứ tự.
 - Tạo bản xem trước để người dùng sắp xếp hoặc thay câu.
 - Lưu snapshot của đề đã tạo.
-- Xuất DOCX và PDF sau khi người dùng xác nhận.
+- Xuất DOCX khổ A4 với nội dung, công thức và ảnh crop được nhúng đúng câu.
+- Xuất PDF sau khi người dùng xác nhận.
 
 ## 5. Công cụ độc lập: Làm nét ảnh
 

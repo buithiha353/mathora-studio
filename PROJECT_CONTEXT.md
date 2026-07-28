@@ -1,6 +1,6 @@
 # Mathora Studio — Project Context
 
-Last updated: 2026-07-28 (Asia/Saigon)
+Last updated: 2026-07-29 (Asia/Saigon)
 
 ## Project
 
@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 13
-- Current code version: 13
+- Current code version: 14 (not yet deployed)
 - Sites deployed source: `8352bff4511000f899f0efc2b5fcf14714960f6a`
 - Sites saved version: 9
 
@@ -85,9 +85,14 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 7. Browse reviewed questions with grade/difficulty filters and a full
    per-question detail view; generate or regenerate a randomized exam preview
    from a requested grade and difficulty matrix.
-8. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
-9. Generate structured 2D real-world math illustrations with verified data labels.
-10. Provide a safe demo result when no active Gemini key exists.
+   Confirmed image regions are attached to each library/exam question and
+   rendered as real source crops in both detail and exam preview views.
+8. Export generated exams as A4 DOCX files with Times New Roman body text,
+   Cambria Math formula lines, and inline cropped source images attached to
+   their questions.
+9. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
+10. Generate structured 2D real-world math illustrations with verified data labels.
+11. Provide a safe demo result when no active Gemini key exists.
 
 ## Data model
 
@@ -108,8 +113,11 @@ Document status flow: `UPLOADED` → `REGION_REVIEW` → `COMPLETED`.
 
 - Direct Gemini processing is limited to 18 MB per image page; source PDF upload
   remains limited to 50 MB and 200 rendered pages.
-- Region coordinates and the original source are preserved, but real crop extraction and reinsertion into exported exam files are not complete.
-- Exam generation currently produces an in-app preview and stored snapshot, not a final DOCX/PDF export.
+- Region coordinates and the original source are preserved and cropped on
+  demand; materializing every crop as an independent stored asset remains
+  future work.
+- Exam generation produces an in-app preview, stored snapshot, and DOCX export;
+  final PDF export is not complete.
 - Formula review uses editable LaTeX text; dedicated typeset rendering is not yet integrated.
 - A review session is primarily held in the active client workflow; full recovery and document-history reopening need expansion.
 - Illustration output is a structured renderer rather than a downloadable production SVG/PDF workflow.
@@ -127,10 +135,15 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- ten application tests, including the human-review gate, selectable Gemini
+- twelve application tests, including the human-review gate, selectable Gemini
   model whitelist, layout-before-OCR enforcement, PDF page splitting, editable
   regions, real crop previews, grade filtering, question details, exam
-  regeneration, and the THCS illustration prompt.
+  regeneration, source-image attachment, DOCX export, and the THCS
+  illustration prompt.
+- A generated DOCX fixture passed structural inspection with A4 geometry,
+  Vietnamese text/formula content, and an inline PNG media relationship.
+  LibreOffice is not installed in the local workspace, so automated PNG render
+  inspection was unavailable for this version.
 
 The new self-hosted database has no active Gemini key yet. A key must be added
 again through Settings before a real Gemini request can be verified from the
@@ -138,9 +151,9 @@ Vietnam-hosted backend.
 
 ## Next work
 
-1. Extract confirmed regions into durable crop assets and reinsert them at the correct question position.
-2. Export generated exams to DOCX and PDF with preserved formulas and images.
-3. Add typeset formula preview and formula-level review status.
+1. Materialize confirmed source crops as independent stored assets.
+2. Export generated exams to PDF with preserved formulas and images.
+3. Add native Word equation objects and typeset formula preview.
 4. Add resumable document/review history.
 5. Expand API and end-to-end tests for real OCR/review/export workflows.
 
@@ -177,3 +190,6 @@ Vietnam-hosted backend.
   question-library details/grade filters, and exam regeneration release to both
   production targets; preserved cPanel data/uploads and verified the primary
   page, overview API, production bundle, and all five requested UI behaviors.
+- 2026-07-29 — v14 (not deployed): Attached confirmed source regions to
+  library/exam questions, displayed real image crops in question details and
+  exam previews, and added A4 DOCX download with formulas and inline images.

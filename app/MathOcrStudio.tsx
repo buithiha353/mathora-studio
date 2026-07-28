@@ -87,6 +87,16 @@ type Question = {
   assetCount: number;
   answer?: string;
   status?: string;
+  assets?: QuestionAsset[];
+};
+
+type QuestionAsset = {
+  id: string;
+  label: string;
+  regionType: string;
+  box: number[];
+  page: number;
+  sourceUrl: string;
 };
 
 type Region = {
@@ -300,7 +310,7 @@ function RegionCropPreview({
   region,
   source,
 }: {
-  region: Region;
+  region: Pick<Region, "label" | "box" | "page">;
   source: string | null;
 }) {
   if (!source) {
@@ -335,6 +345,72 @@ function RegionCropPreview({
       </span>
     </div>
   );
+}
+
+async function cropQuestionAsset(asset: QuestionAsset) {
+  const response = await fetch(`${API_BASE_PATH}${asset.sourceUrl}`);
+  if (!response.ok) {
+    throw new Error(`Không thể tải ${asset.label}.`);
+  }
+  const bitmap = await createImageBitmap(await response.blob());
+  try {
+    const [top, left, bottom, right] = asset.box;
+    const sourceLeft = Math.max(
+      0,
+      Math.min(bitmap.width - 1, Math.round((left / 100) * bitmap.width)),
+    );
+    const sourceTop = Math.max(
+      0,
+      Math.min(bitmap.height - 1, Math.round((top / 100) * bitmap.height)),
+    );
+    const sourceRight = Math.max(
+      sourceLeft + 1,
+      Math.min(bitmap.width, Math.round((right / 100) * bitmap.width)),
+    );
+    const sourceBottom = Math.max(
+      sourceTop + 1,
+      Math.min(bitmap.height, Math.round((bottom / 100) * bitmap.height)),
+    );
+    const cropWidth = sourceRight - sourceLeft;
+    const cropHeight = sourceBottom - sourceTop;
+    const canvas = window.document.createElement("canvas");
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error("Không thể tạo vùng ảnh cho file Word.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, cropWidth, cropHeight);
+    context.drawImage(
+      bitmap,
+      sourceLeft,
+      sourceTop,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropWidth,
+      cropHeight,
+    );
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (value) =>
+          value
+            ? resolve(value)
+            : reject(new Error("Không thể mã hóa ảnh cho file Word.")),
+        "image/png",
+      ),
+    );
+    const scale = Math.min(1, 500 / cropWidth, 300 / cropHeight);
+    return {
+      id: asset.id,
+      label: asset.label,
+      data: new Uint8Array(await blob.arrayBuffer()),
+      width: Math.max(1, Math.round(cropWidth * scale)),
+      height: Math.max(1, Math.round(cropHeight * scale)),
+    };
+  } finally {
+    bitmap.close();
+  }
 }
 
 function DocumentPaper({
@@ -1581,6 +1657,22 @@ function LibraryView({
                   <p>{selectedQuestion.answer}</p>
                 </div>
               ) : null}
+              {selectedQuestion.assets?.length ? (
+                <div className="question-detail-content">
+                  <small>Hình đi kèm</small>
+                  <div className="question-detail-assets">
+                    {selectedQuestion.assets.map((asset) => (
+                      <div key={asset.id}>
+                        <RegionCropPreview
+                          region={asset}
+                          source={`${API_BASE_PATH}${asset.sourceUrl}`}
+                        />
+                        <span>{asset.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className="question-detail-footer">
                 <span>
                   {selectedQuestion.assetCount
@@ -1619,6 +1711,7 @@ function ExamView({
   });
   const [generated, setGenerated] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
+  const [downloadingWord, setDownloadingWord] = useState(false);
   const total = Object.values(matrix).reduce((sum, value) => sum + value, 0);
 
   async function generate() {
@@ -1647,6 +1740,70 @@ function ExamView({
       onNotice("Đã tạo bản xem trước từ dữ liệu hiện có.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function downloadWord() {
+    if (!generated.length || downloadingWord) {
+      if (!generated.length) onNotice("Hãy tạo đề trước khi tải file Word.");
+      return;
+    }
+    setDownloadingWord(true);
+    try {
+      let omittedImages = 0;
+      const questionsForWord = await Promise.all(
+        generated.map(async (question) => {
+          const assets = (
+            await Promise.all(
+              (question.assets ?? []).map(async (asset) => {
+                try {
+                  return await cropQuestionAsset(asset);
+                } catch {
+                  omittedImages += 1;
+                  return null;
+                }
+              }),
+            )
+          ).filter((asset) => asset !== null);
+          return {
+            content: question.content,
+            latex: question.latex,
+            assets,
+          };
+        }),
+      );
+      const { packExamDocument } = await import("@/lib/exam-docx");
+      const blob = await packExamDocument({
+        title,
+        duration,
+        questions: questionsForWord,
+      });
+      const safeName =
+        title
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          .toLowerCase() || "de-thi-toan";
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = `${safeName}.docx`;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      onNotice(
+        omittedImages
+          ? `Đã tải file Word; ${omittedImages} hình nguồn không còn khả dụng nên chưa được nhúng.`
+          : "Đã tải file Word với đầy đủ nội dung, công thức và hình ảnh.",
+      );
+    } catch (error) {
+      onNotice(
+        error instanceof Error ? error.message : "Không thể tạo file Word.",
+      );
+    } finally {
+      setDownloadingWord(false);
     }
   }
 
@@ -1816,8 +1973,15 @@ function ExamView({
               <IconButton label="Xem toàn màn hình">
                 <Eye size={17} />
               </IconButton>
-              <IconButton label="Tải xuống">
-                <Download size={17} />
+              <IconButton
+                label="Tải đề thi Word"
+                onClick={() => void downloadWord()}
+              >
+                {downloadingWord ? (
+                  <RefreshCcw className="spin-icon" size={17} />
+                ) : (
+                  <Download size={17} />
+                )}
               </IconButton>
             </div>
           </div>
@@ -1832,6 +1996,17 @@ function ExamView({
                 <div className="generated-question" key={question.id ?? index}>
                   <strong>Câu {index + 1}.</strong> {question.content}
                   {question.latex ? <code>{question.latex}</code> : null}
+                  {question.assets?.length ? (
+                    <div className="generated-question-assets">
+                      {question.assets.map((asset) => (
+                        <RegionCropPreview
+                          key={asset.id}
+                          region={asset}
+                          source={`${API_BASE_PATH}${asset.sourceUrl}`}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -1848,11 +2023,26 @@ function ExamView({
             </div>
           )}
           <div className="preview-audit">
-            <ShieldCheck size={17} />
-            <span>
-              <strong>Kiểm tra trước xuất</strong>
-              <small>Đáp án, hình và công thức được đối soát tự động</small>
-            </span>
+            <div className="preview-audit-copy">
+              <ShieldCheck size={17} />
+              <span>
+                <strong>Kiểm tra trước xuất</strong>
+                <small>Hình và công thức được giữ trong file Word</small>
+              </span>
+            </div>
+            <button
+              type="button"
+              className="button button-primary word-download-button"
+              onClick={() => void downloadWord()}
+              disabled={!generated.length || downloadingWord}
+            >
+              {downloadingWord ? (
+                <RefreshCcw className="spin-icon" size={15} />
+              ) : (
+                <Download size={15} />
+              )}
+              {downloadingWord ? "Đang tạo Word..." : "Tải Word (.docx)"}
+            </button>
           </div>
         </aside>
       </section>

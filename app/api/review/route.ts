@@ -183,6 +183,14 @@ export async function POST(request: Request) {
         );
       }
     }
+    const regionCounts = new Map<string, number>();
+    for (const region of regions) {
+      if (!region.questionId) continue;
+      regionCounts.set(
+        region.questionId,
+        (regionCounts.get(region.questionId) ?? 0) + 1,
+      );
+    }
 
     await db.batch([
       ...questions.map((question) =>
@@ -201,7 +209,7 @@ export async function POST(request: Request) {
             question.topic.trim(),
             question.difficulty,
             question.answer?.trim() ?? "",
-            Math.max(0, Number(question.assetCount) || 0),
+            regionCounts.get(question.id) ?? 0,
             question.id,
             documentId,
           ),
