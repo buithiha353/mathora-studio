@@ -10,10 +10,10 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 14
-- Current code version: 15 (not yet deployed)
-- Sites deployed source: `88ddb0c7af02df22dec88cdfd3e2d18ff1b95acf`
-- Sites saved version: 10
+- Current deployed version: 15
+- Current code version: 15
+- Sites deployed source: `2f5520a411276489095c9e325843e404a67941e8`
+- Sites saved version: 12
 
 ## Product rules
 
@@ -137,7 +137,8 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- twelve application tests, including the human-review gate, selectable Gemini
+- thirteen application tests, including the removal of seeded library data,
+  the human-review gate, selectable Gemini
   model whitelist, layout-before-OCR enforcement, PDF page splitting, editable
   regions, real crop previews, grade filtering, question details, exam
   regeneration, source-image attachment, DOCX export, and the THCS
@@ -203,3 +204,7 @@ Vietnam-hosted backend.
   fallback display of the six initial `q-demo-*` questions, and added a targeted
   cleanup for those records and exam snapshots that reference them while
   preserving all OCR-derived questions.
+- 2026-07-29 — v15 deployment: Removed all six initial sample questions from
+  both production databases, leaving 53 OCR-derived questions on cPanel and 4
+  on Sites; added non-cached overview responses and verified zero remaining
+  `q-demo-*` records on both targets.
