@@ -11,6 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 8
+- Current code version: 9 (not yet deployed)
 - Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
@@ -21,6 +22,10 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 - Questions must be reviewed and confirmed before they can be used to generate exams.
 - Image sharpening is an independent tool, not an OCR pipeline step.
 - Illustration generation must keep every displayed datum traceable to the problem statement.
+- Illustration generation uses the authoritative Vietnamese THCS textbook
+  prompt in `lib/illustration-prompt.ts`: clean 2D technical drawing, white
+  background, restrained colors, exact geometric notation, minimal real-world
+  objects, no decorative scene, and no text beyond mathematical labels/data.
 - OCR recognition is pinned to the stable model `gemini-3.5-flash`.
 
 ## Architecture
@@ -92,7 +97,8 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- four application tests, including the human-review gate and Gemini 3.5 Flash pin.
+- five application tests, including the human-review gate, Gemini 3.5 Flash
+  pin, and THCS illustration-prompt enforcement.
 
 The new self-hosted database has no active Gemini key yet. A key must be added
 again through Settings before a real Gemini request can be verified from the
@@ -119,3 +125,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — Plan rewrite: Added the authoritative Vietnamese product plan and explicitly separated image sharpening and illustration generation from the OCR workflow.
 - 2026-07-28 — v7: Added a Node.js self-hosted target with `/thuviendethi` base path, SQLite/local-file adapters, a 50 MB request limit, and deployed it to `minhkhue.one` on cPanel Node.js 24.
 - 2026-07-28 — v8: Fixed Vinext App Router standalone asset routing under the cPanel `/thuviendethi` mount, normalized packaged static-cache paths across Windows/Linux, and redeployed the fully styled interface.
+- 2026-07-28 — v9 (not deployed): Added the authoritative THCS textbook illustration prompt, including strict 2D style, geometry, notation, color, layout, real-world simplification, print-quality, source-verification, and answer-hiding rules.

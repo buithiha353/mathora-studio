@@ -1,4 +1,5 @@
 import { demoIllustrationSpec } from "@/lib/demo-data";
+import { buildIllustrationPrompt } from "@/lib/illustration-prompt";
 import { ensureDatabase } from "@/lib/server/database";
 import {
   callGeminiStructured,
@@ -73,11 +74,11 @@ export async function POST(request: Request) {
     try {
       const result = await callGeminiStructured({
         schema: illustrationSchema,
-        prompt: `Phân tích bài toán thực tế sau và tạo đặc tả hình minh họa 2D kiểu sách giáo khoa.
-Mục đích: ${purpose}. Chế độ: ${payload.mode ?? "HYBRID"}.
-Chỉ dùng dữ kiện xuất hiện nguyên văn trong đề. Không tính hoặc để lộ đáp án.
-Nếu không đủ dữ kiện để vẽ đúng tỉ lệ, đặt toScale=false.
-Bài toán: ${problem}`,
+        prompt: buildIllustrationPrompt({
+          problem,
+          purpose,
+          mode: payload.mode ?? "HYBRID",
+        }),
       });
       spec = result.data as typeof demoIllustrationSpec;
       if (!factsAreSafe(problem, spec, purpose)) {

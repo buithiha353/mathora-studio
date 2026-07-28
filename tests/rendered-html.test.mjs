@@ -65,6 +65,24 @@ test("pins OCR recognition to the stable Gemini 3.5 Flash model", async () => {
   assert.doesNotMatch(gemini, /temperature|top_p|top_k/);
 });
 
+test("applies the THCS textbook illustration prompt", async () => {
+  const [illustrationPrompt, illustrationRoute] = await Promise.all([
+    readFile(new URL("../lib/illustration-prompt.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/api/illustrations/route.ts", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(illustrationPrompt, /sách giáo khoa Toán THCS/);
+  assert.match(illustrationPrompt, /Không hiệu ứng 3D/);
+  assert.match(illustrationPrompt, /Góc vuông phải có ký hiệu/);
+  assert.match(illustrationPrompt, /Chỉ sử dụng 2–4 màu nhạt/);
+  assert.match(illustrationPrompt, /không để lộ đáp án/);
+  assert.match(illustrationPrompt, /caption chỉ dùng làm metadata nội bộ/);
+  assert.match(illustrationRoute, /buildIllustrationPrompt/);
+});
+
 test("removes starter preview and declares persistent bindings", async () => {
   const [hosting, page, layout, packageJson] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
