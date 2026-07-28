@@ -27,6 +27,7 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 - App: Vinext/Next-compatible React 19 + TypeScript.
 - Main client workspace: `app/MathOcrStudio.tsx`.
 - Styling: `app/globals.css`.
+- Authoritative product plan: `PLAN.md`.
 - API routes: upload, process, review, overview, exams, illustrations, and keys under `app/api/`.
 - Structured data: Cloudflare D1, declared as `DB`.
 - Uploaded files: Cloudflare R2, declared as `FILES`.
@@ -100,3 +101,4 @@ Latest version passed:
 - 2026-07-28 — v5: Changed OCR recognition and stored API-key model metadata to stable `gemini-3.5-flash`; deployed to production.
 - 2026-07-28 — v6: Replaced metadata-only API-key validation with real generation validation, moved secrets from URL queries to headers, and added sanitized Gemini error details; deployed to production.
 - 2026-07-28 — GitHub publication: Published the complete tracked source and history to the private `buithiha353/mathora-studio` repository; generated ZIP exports remain local only.
+- 2026-07-28 — Plan rewrite: Added the authoritative Vietnamese product plan and explicitly separated image sharpening and illustration generation from the OCR workflow.
