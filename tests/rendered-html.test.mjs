@@ -44,9 +44,10 @@ test("requires human review before questions can enter exams", async () => {
 });
 
 test("keeps the library free of initial sample questions", async () => {
-  const [database, studio] = await Promise.all([
+  const [database, studio, overviewRoute] = await Promise.all([
     readFile(new URL("../lib/server/database.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/overview/route.ts", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(database, /INSERT OR REPLACE INTO questions/);
@@ -55,6 +56,7 @@ test("keeps the library free of initial sample questions", async () => {
   assert.match(database, /'q-demo-06'/);
   assert.match(database, /question_ids_json LIKE '%q-demo-%'/);
   assert.match(studio, /questions: \[\] as Question\[\]/);
+  assert.match(overviewRoute, /"Cache-Control": "no-store"/);
 });
 
 test("supports selectable Gemini models for document recognition", async () => {

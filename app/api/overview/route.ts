@@ -53,23 +53,26 @@ export async function GET() {
       ]);
     }
 
-    return Response.json({
-      metrics: {
-        documents: Number(documents?.total ?? 0),
-        questions: Number(questions?.total ?? 0),
-        exams: Number(exams?.total ?? 0),
-        activeKeys: Number(apiKeys?.total ?? 0),
+    return Response.json(
+      {
+        metrics: {
+          documents: Number(documents?.total ?? 0),
+          questions: Number(questions?.total ?? 0),
+          exams: Number(exams?.total ?? 0),
+          activeKeys: Number(apiKeys?.total ?? 0),
+        },
+        questions: latestQuestions.results.map((question) => {
+          const id = String((question as { id?: unknown }).id ?? "");
+          const assets = assetsByQuestion.get(id) ?? [];
+          return { ...question, assetCount: assets.length, assets };
+        }),
       },
-      questions: latestQuestions.results.map((question) => {
-        const id = String((question as { id?: unknown }).id ?? "");
-        const assets = assetsByQuestion.get(id) ?? [];
-        return { ...question, assetCount: assets.length, assets };
-      }),
-    });
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Không thể tải dữ liệu." },
-      { status: 500 },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
