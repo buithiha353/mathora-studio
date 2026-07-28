@@ -2168,10 +2168,10 @@ function SettingsView({
             <span className="summary-icon blue">
               <Database size={20} />
             </span>
-            <h3>Quota theo project</h3>
+            <h3>Quota nhận diện</h3>
             <p>
-              Các key cùng project chia sẻ hạn mức. Bộ điều phối không chuyển giữa
-              chúng để né lỗi 429.
+              Mỗi key dùng model đã chọn và được theo dõi hạn mức riêng. Key gặp
+              lỗi tạm thời sẽ được đưa vào cooldown trước khi thử lại.
             </p>
           </div>
           <div className="info-card usage-card">
