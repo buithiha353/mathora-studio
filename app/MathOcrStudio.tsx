@@ -179,13 +179,8 @@ const stepLabels = [
 ];
 
 const initialOverview = {
-  metrics: { documents: 12, questions: 248, exams: 7, activeKeys: 0 },
-  questions: demoOcrResult.questions.map((question, index) => ({
-    ...question,
-    id: `local-${index}`,
-    answer: "",
-    status: "REVIEWED",
-  })),
+  metrics: { documents: 0, questions: 0, exams: 0, activeKeys: 0 },
+  questions: [] as Question[],
 };
 
 function IconButton({

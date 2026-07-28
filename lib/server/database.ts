@@ -99,69 +99,17 @@ const schemaStatements = [
      'gemini-3.5-flash-lite',
      'gemini-3.1-flash-lite'
    )`,
-];
-
-const demoQuestions = [
-  {
-    id: "q-demo-01",
-    code: "MTH-001",
-    content: "Giải phương trình x² − 5x + 6 = 0.",
-    latex: "x^2-5x+6=0",
-    topic: "Phương trình bậc hai",
-    difficulty: "HIEU",
-    answer: "x = 2 hoặc x = 3",
-    assetCount: 0,
-  },
-  {
-    id: "q-demo-02",
-    code: "MTH-002",
-    content: "Một con thuyền đi qua sông rộng 120 m với vận tốc không đổi. Xác định độ dài đường đi khi biết góc lệch 30°.",
-    latex: "d=\\frac{120}{\\cos 30^\\circ}",
-    topic: "Hệ thức lượng",
-    difficulty: "VAN_DUNG",
-    answer: "80√3 m",
-    assetCount: 1,
-  },
-  {
-    id: "q-demo-03",
-    code: "MTH-003",
-    content: "Tam giác ABC vuông tại A, có AB = 6 cm và AC = 8 cm. Tính BC.",
-    latex: "BC=\\sqrt{AB^2+AC^2}",
-    topic: "Định lý Pythagore",
-    difficulty: "BIET",
-    answer: "10 cm",
-    assetCount: 1,
-  },
-  {
-    id: "q-demo-04",
-    code: "MTH-004",
-    content: "Từ điểm A ngoài đường tròn (O), kẻ hai tiếp tuyến AB và AC. Chứng minh AB = AC.",
-    latex: "AB=AC",
-    topic: "Đường tròn",
-    difficulty: "VAN_DUNG_CAO",
-    answer: "Hai tam giác vuông ABO và ACO bằng nhau",
-    assetCount: 1,
-  },
-  {
-    id: "q-demo-05",
-    code: "MTH-005",
-    content: "Cho hàm số y = 2x − 3. Tìm tọa độ giao điểm của đồ thị với trục tung.",
-    latex: "y=2x-3",
-    topic: "Hàm số bậc nhất",
-    difficulty: "HIEU",
-    answer: "(0; −3)",
-    assetCount: 0,
-  },
-  {
-    id: "q-demo-06",
-    code: "MTH-006",
-    content: "Một hộp có 5 bi đỏ và 4 bi xanh. Lấy ngẫu nhiên 1 bi. Tính xác suất lấy được bi đỏ.",
-    latex: "P=\\frac{5}{9}",
-    topic: "Xác suất",
-    difficulty: "VAN_DUNG",
-    answer: "5/9",
-    assetCount: 1,
-  },
+  `DELETE FROM exams
+   WHERE question_ids_json LIKE '%q-demo-%'`,
+  `DELETE FROM questions
+   WHERE id IN (
+     'q-demo-01',
+     'q-demo-02',
+     'q-demo-03',
+     'q-demo-04',
+     'q-demo-05',
+     'q-demo-06'
+   )`,
 ];
 
 async function initialize() {
@@ -177,27 +125,6 @@ async function initialize() {
       )
       .run();
   }
-
-  await db.batch(
-    demoQuestions.map((question) =>
-      db
-        .prepare(
-          `INSERT OR REPLACE INTO questions
-            (id, code, content, latex, grade, topic, difficulty, type, answer, asset_count, status)
-           VALUES (?, ?, ?, ?, 9, ?, ?, 'MULTIPLE_CHOICE', ?, ?, 'REVIEWED')`,
-        )
-        .bind(
-          question.id,
-          question.code,
-          question.content,
-          question.latex,
-          question.topic,
-          question.difficulty,
-          question.answer,
-          question.assetCount,
-        ),
-    ),
-  );
 }
 
 export async function ensureDatabase() {

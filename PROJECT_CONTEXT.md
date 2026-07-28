@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 14
-- Current code version: 14
+- Current code version: 15 (not yet deployed)
 - Sites deployed source: `88ddb0c7af02df22dec88cdfd3e2d18ff1b95acf`
 - Sites saved version: 10
 
@@ -93,6 +93,8 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 9. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
 10. Generate structured 2D real-world math illustrations with verified data labels.
 11. Provide a safe demo result when no active Gemini key exists.
+12. Keep the persistent question library free of built-in sample records; only
+    reviewed OCR questions are stored as library data.
 
 ## Data model
 
@@ -197,3 +199,7 @@ Vietnam-hosted backend.
   A4 DOCX export to both production targets; preserved cPanel data/uploads and
   verified the primary page, overview API, region-image route, production
   bundle, and Sites production deployment.
+- 2026-07-29 — v15 (not deployed): Removed automatic insertion and client-side
+  fallback display of the six initial `q-demo-*` questions, and added a targeted
+  cleanup for those records and exam snapshots that reference them while
+  preserving all OCR-derived questions.
