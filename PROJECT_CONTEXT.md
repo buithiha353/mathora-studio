@@ -12,7 +12,7 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 11
 - Current code version: 11
-- Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
+- Sites deployed source: `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c`
 
 ## Product rules
 
@@ -146,3 +146,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — v10 deployment: Deployed the authoritative THCS illustration prompt and corrected river-crossing few-shot to the cPanel Node.js production app at `minhkhue.one/thuviendethi`; page, overview API, all six static assets, illustration workspace, and browser console checks passed.
 - 2026-07-28 — v11 (not deployed): Added a strict layout-only Document Layout AI pass with pixel bounding boxes before content OCR, selectable Gemini 2.5/3.5 Flash-Lite/3.1 Flash-Lite models per key, and removed the user-facing Google Cloud project requirement.
 - 2026-07-28 — v11 cPanel deployment: Deployed the layout-first OCR workflow and per-key model selection to `minhkhue.one/thuviendethi`, preserved the existing key store and application data, removed the remaining user-facing project wording, and verified the page, overview API, all six static assets, model selector, and browser console.
+- 2026-07-28 — v11 Sites deployment: Published saved Sites version 7 from source `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c` to `mathora-studio.nhatha-drive10.chatgpt.site`.
