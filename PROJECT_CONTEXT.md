@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 11
-- Current code version: 11
+- Current code version: 12 (not yet deployed)
 - Sites deployed source: `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c`
 
 ## Product rules
@@ -44,6 +44,8 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - App: Vinext/Next-compatible React 19 + TypeScript.
 - Main client workspace: `app/MathOcrStudio.tsx`.
+- Client-side PDF rasterization: PDF.js renders each PDF page to a high-resolution
+  PNG before upload to `app/api/upload/page/route.ts`.
 - Styling: `app/globals.css`.
 - Authoritative product plan: `PLAN.md`.
 - API routes: upload, process, review, overview, exams, illustrations, and keys under `app/api/`.
@@ -62,13 +64,18 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 ## Implemented capabilities
 
-1. Upload PDF, PNG, JPG, JPEG, or WebP source documents to R2.
-2. Build a pixel-coordinate Layout Map first, normalize its reading order and
+1. Upload PDF, PNG, JPG, JPEG, or WebP source documents to R2; PDF files are
+   rendered client-side into numbered PNG pages and stored separately.
+2. Process every numbered page image sequentially, build a pixel-coordinate
+   Layout Map first, normalize its reading order and
    review flags, then recognize THCS question content, LaTeX, knowledge topics,
    grades, and difficulty in a separate second Gemini pass.
 3. Validate keys with a minimal real `generateContent` request, expose sanitized Google errors, rotate healthy keys by priority and usage, and preserve temporarily rate-limited keys for later rotation.
 4. Persist extracted questions and image regions as awaiting review.
-5. Let users review region labels/types/question links and edit question content, LaTeX, grade, topic, difficulty, and answer.
+5. Let users move and resize detected regions directly with eight handles,
+   edit exact coordinates, switch to the region's source page, review region
+   labels/types/question links, and edit question content, LaTeX, grade, topic,
+   difficulty, and answer.
 6. Admit only confirmed questions to the library and only reviewed questions to exam generation.
 7. Generate an exam preview from a requested grade and difficulty matrix.
 8. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
@@ -92,8 +99,8 @@ Document status flow: `UPLOADED` → `REGION_REVIEW` → `COMPLETED`.
 
 ## Current constraints and gaps
 
-- Direct OCR processing is limited to 18 MB per source file.
-- The layout pass currently sends the uploaded source MIME directly to Gemini; automatic rendering of each PDF page to a normalized high-resolution PNG is not yet implemented.
+- Direct Gemini processing is limited to 18 MB per image page; source PDF upload
+  remains limited to 50 MB and 200 rendered pages.
 - Region coordinates and the original source are preserved, but real crop extraction and reinsertion into exported exam files are not complete.
 - Exam generation currently produces an in-app preview and stored snapshot, not a final DOCX/PDF export.
 - Formula review uses editable LaTeX text; dedicated typeset rendering is not yet integrated.
@@ -113,8 +120,9 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- six application tests, including the human-review gate, selectable Gemini
-  model whitelist, layout-before-OCR enforcement, and THCS illustration prompt.
+- eight application tests, including the human-review gate, selectable Gemini
+  model whitelist, layout-before-OCR enforcement, PDF page splitting, editable
+  regions, and the THCS illustration prompt.
 
 The new self-hosted database has no active Gemini key yet. A key must be added
 again through Settings before a real Gemini request can be verified from the
@@ -147,3 +155,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — v11 (not deployed): Added a strict layout-only Document Layout AI pass with pixel bounding boxes before content OCR, selectable Gemini 2.5/3.5 Flash-Lite/3.1 Flash-Lite models per key, and removed the user-facing Google Cloud project requirement.
 - 2026-07-28 — v11 cPanel deployment: Deployed the layout-first OCR workflow and per-key model selection to `minhkhue.one/thuviendethi`, preserved the existing key store and application data, removed the remaining user-facing project wording, and verified the page, overview API, all six static assets, model selector, and browser console.
 - 2026-07-28 — v11 Sites deployment: Published saved Sites version 7 from source `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c` to `mathora-studio.nhatha-drive10.chatgpt.site`.
+- 2026-07-28 — v12 (not deployed): Added client-side PDF-to-PNG page splitting with per-page Gemini layout/content processing, page-aware region persistence, and an interactive region editor with drag, eight resize handles, page navigation, and exact coordinate inputs.

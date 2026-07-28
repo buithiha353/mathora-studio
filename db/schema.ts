@@ -37,6 +37,7 @@ export const imageRegions = sqliteTable("image_regions", {
   label: text("label").notNull(),
   regionType: text("region_type").notNull().default("geometry"),
   boxJson: text("box_json").notNull(),
+  pageNumber: integer("page_number").notNull().default(1),
   confidence: integer("confidence").notNull().default(0),
   status: text("status").notNull().default("AWAITING_REVIEW"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

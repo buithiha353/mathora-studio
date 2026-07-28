@@ -132,6 +132,7 @@ type OcrRegion = {
   id?: string;
   label: string;
   box: number[];
+  page?: number;
   questionCode: string;
   questionId?: string | null;
   regionType?: string;
@@ -256,6 +257,7 @@ function reviewRegionsFromLayout(layout: LayoutMap): OcrRegion[] {
     .map((region) => ({
       id: region.id,
       label: region.type,
+      page: layout.page,
       box: [
         clampPercent((Number(region.bbox?.top) / height) * 100),
         clampPercent((Number(region.bbox?.left) / width) * 100),
@@ -268,6 +270,69 @@ function reviewRegionsFromLayout(layout: LayoutMap): OcrRegion[] {
     }));
 }
 
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+type SourcePage = {
+  pageNumber: number;
+  mimeType: string;
+  base64: string;
+};
+
+async function loadSourcePages(document: {
+  id: string;
+  mimeType: string;
+  size: number;
+  r2Key: string;
+  pageCount: number;
+}) {
+  const files = requireFiles();
+  if (document.mimeType === "application/pdf") {
+    const pages: SourcePage[] = [];
+    for (let pageNumber = 1; pageNumber <= document.pageCount; pageNumber += 1) {
+      const pageKey = `documents/${document.id}/pages/page-${String(pageNumber).padStart(4, "0")}.png`;
+      const pageObject = await files.get(pageKey);
+      if (!pageObject) {
+        throw new Error(
+          `Thiếu ảnh PNG của trang ${pageNumber}. Hãy tải lại file PDF để hệ thống tách trang.`,
+        );
+      }
+      const pageBytes = new Uint8Array(await pageObject.arrayBuffer());
+      if (pageBytes.byteLength > 18 * 1024 * 1024) {
+        throw new Error(`Ảnh trang ${pageNumber} vượt quá giới hạn 18 MB.`);
+      }
+      pages.push({
+        pageNumber,
+        mimeType: "image/png",
+        base64: bytesToBase64(pageBytes),
+      });
+    }
+    return pages;
+  }
+
+  if (document.size > 18 * 1024 * 1024) {
+    throw new Error("Ảnh nguồn vượt quá giới hạn xử lý trực tiếp 18 MB.");
+  }
+  const object = await files.get(document.r2Key);
+  if (!object) {
+    throw new Error("Không tìm thấy tệp nguồn.");
+  }
+  const bytes = new Uint8Array(await object.arrayBuffer());
+  return [
+    {
+      pageNumber: 1,
+      mimeType: document.mimeType,
+      base64: bytesToBase64(bytes),
+    },
+  ];
+}
+
 export async function POST(request: Request) {
   try {
     const { documentId } = (await request.json()) as { documentId?: string };
@@ -278,7 +343,8 @@ export async function POST(request: Request) {
     const db = await ensureDatabase();
     const document = await db
       .prepare(
-        `SELECT id, name, mime_type AS mimeType, size, r2_key AS r2Key
+        `SELECT id, name, mime_type AS mimeType, size, r2_key AS r2Key,
+                page_count AS pageCount
          FROM documents WHERE id = ?`,
       )
       .bind(documentId)
@@ -288,65 +354,79 @@ export async function POST(request: Request) {
         mimeType: string;
         size: number;
         r2Key: string;
+        pageCount: number;
       }>();
     if (!document) {
       return Response.json({ error: "Không tìm thấy tài liệu." }, { status: 404 });
     }
-    if (document.size > 18 * 1024 * 1024) {
-      return Response.json(
-        {
-          error:
-            "MVP xử lý trực tiếp tệp tối đa 18 MB. Tệp lớn hơn sẽ dùng Files API ở bản tiếp theo.",
-        },
-        { status: 413 },
-      );
-    }
-
-    const object = await requireFiles().get(document.r2Key);
-    if (!object) {
-      return Response.json({ error: "Không tìm thấy tệp nguồn." }, { status: 404 });
-    }
-    const bytes = new Uint8Array(await object.arrayBuffer());
-    let binary = "";
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    const base64 = btoa(binary);
+    const sourcePages = await loadSourcePages(document);
 
     let result: OcrResult;
-    let layoutMap: LayoutMap | null = null;
+    let layoutMaps: LayoutMap[] = [];
     let mode = "gemini";
     let model: string | null = null;
 
     try {
-      const layoutResponse = await callGeminiStructured({
-        mimeType: document.mimeType,
-        data: base64,
-        schema: layoutSchema,
-        prompt: buildDocumentLayoutPrompt(1),
-      });
-      layoutMap = normalizeLayoutMap(layoutResponse.data as LayoutMap);
+      const pageResults: OcrResult[] = [];
+      for (const sourcePage of sourcePages) {
+        const layoutResponse = await callGeminiStructured({
+          ...(model ? { model } : {}),
+          mimeType: sourcePage.mimeType,
+          data: sourcePage.base64,
+          schema: layoutSchema,
+          prompt: buildDocumentLayoutPrompt(sourcePage.pageNumber),
+        });
+        const normalizedLayout = {
+          ...normalizeLayoutMap(layoutResponse.data as LayoutMap),
+          page: sourcePage.pageNumber,
+        };
+        layoutMaps.push(normalizedLayout);
 
-      const response = await callGeminiStructured({
-        model: layoutResponse.model,
-        mimeType: document.mimeType,
-        data: base64,
-        schema: contentOcrSchema,
-        prompt: `Bạn là hệ thống OCR đề thi Toán THCS tiếng Việt dành cho các lớp 6, 7, 8 và 9.
-Đây là bước OCR nội dung chạy SAU bước Document Layout AI. Đọc theo đúng thứ tự và ranh giới vùng trong Layout Map dưới đây. Bảo toàn mọi công thức dưới dạng LaTeX.
+        const response = await callGeminiStructured({
+          model: layoutResponse.model,
+          mimeType: sourcePage.mimeType,
+          data: sourcePage.base64,
+          schema: contentOcrSchema,
+          prompt: `Bạn là hệ thống OCR đề thi Toán THCS tiếng Việt dành cho các lớp 6, 7, 8 và 9.
+Đây là bước OCR nội dung chạy SAU bước Document Layout AI trên trang ${sourcePage.pageNumber}/${sourcePages.length}. Đọc theo đúng thứ tự và ranh giới vùng trong Layout Map dưới đây. Bảo toàn mọi công thức dưới dạng LaTeX.
 Không thay đổi bbox của Layout Map và không gộp các vùng khác loại.
 Tách chính xác từng câu hỏi, xác định khối lớp từ 6 đến 9, phân loại theo mảng kiến thức Toán THCS và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
 Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".
 
 Layout Map:
-${JSON.stringify(layoutMap)}`,
-      });
-      result = response.data as OcrResult;
-      model = response.model;
+${JSON.stringify(normalizedLayout)}`,
+        });
+        pageResults.push(response.data as OcrResult);
+        model = response.model;
+      }
+
+      const confidences = pageResults.map((page) =>
+        normalizeConfidence(page.document?.confidence ?? 0),
+      );
+      result = {
+        document: {
+          name: document.name,
+          pages: sourcePages.length,
+          confidence:
+            confidences.reduce((sum, value) => sum + value, 0) /
+            Math.max(1, confidences.length),
+        },
+        questions: pageResults.flatMap((page) =>
+          Array.isArray(page.questions) ? page.questions : [],
+        ),
+        imageRegions: layoutMaps.flatMap(reviewRegionsFromLayout),
+      };
     } catch (error) {
       if (!(error instanceof NoGeminiKeyError)) throw error;
       result = {
         ...demoOcrResult,
-        document: { ...demoOcrResult.document, name: document.name },
+        document: {
+          ...demoOcrResult.document,
+          name: document.name,
+          pages: sourcePages.length,
+        },
       };
+      layoutMaps = [];
       mode = "demo";
     }
 
@@ -362,14 +442,15 @@ ${JSON.stringify(layoutMap)}`,
     const questionIds = new Map(
       questions.map((question) => [question.code, question.id]),
     );
-    const detectedRegions = layoutMap
-      ? reviewRegionsFromLayout(layoutMap)
+    const detectedRegions = layoutMaps.length
+      ? layoutMaps.flatMap(reviewRegionsFromLayout)
       : Array.isArray(result.imageRegions)
         ? result.imageRegions
         : [];
     const imageRegions = detectedRegions.map((region, index) => ({
       ...region,
       id: `${documentId}-r-${index + 1}`,
+      page: Math.max(1, Math.min(sourcePages.length, Number(region.page) || 1)),
       box: Array.from({ length: 4 }, (_, boxIndex) =>
         Math.max(0, Math.min(100, Number(region.box?.[boxIndex]) || 0)),
       ),
@@ -412,8 +493,8 @@ ${JSON.stringify(layoutMap)}`,
             .prepare(
               `INSERT INTO image_regions
                 (id, document_id, question_id, question_code, label, region_type,
-                 box_json, confidence, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'AWAITING_REVIEW')`,
+                 box_json, page_number, confidence, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AWAITING_REVIEW')`,
             )
             .bind(
               region.id,
@@ -423,6 +504,7 @@ ${JSON.stringify(layoutMap)}`,
               region.label,
               region.regionType,
               JSON.stringify(region.box),
+              region.page,
               Math.round(region.confidence * 10000),
             ),
         ),
@@ -434,7 +516,7 @@ ${JSON.stringify(layoutMap)}`,
       ],
     );
 
-    return Response.json({ result, layoutMap, mode, model });
+    return Response.json({ result, layoutMaps, mode, model });
   } catch (error) {
     return Response.json(
       {

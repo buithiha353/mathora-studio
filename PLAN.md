@@ -27,6 +27,8 @@ trong quy trình OCR.
 - Hỗ trợ PDF, PNG, JPG, JPEG và WebP.
 - Kiểm tra định dạng, dung lượng và khả năng đọc trước khi xử lý.
 - Lưu tệp gốc để đối chiếu và tái xử lý.
+- Với PDF, dùng PDF.js render từng trang thành PNG độ phân giải cao, lưu riêng
+  theo số trang và chỉ gửi các ảnh trang này cho Gemini.
 - Không tự động làm nét ảnh.
 
 ### 3.2. Nhận diện bằng AI
@@ -50,7 +52,10 @@ trong quy trình OCR.
 ### 3.3. Kiểm tra vùng ảnh bắt buộc
 
 - Hiển thị vùng AI đã khoanh trên bản xem trước.
-- Cho phép người dùng di chuyển, thay đổi kích thước, thêm hoặc xóa vùng.
+- Cho phép kéo trực tiếp để di chuyển vùng, dùng tám tay nắm để thay đổi kích
+  thước và nhập tọa độ phần trăm để chỉnh chính xác.
+- Tự chuyển bản xem trước đến đúng trang của vùng đang chọn.
+- Cho phép người dùng thêm hoặc xóa vùng.
 - Cho phép sửa loại vùng và câu hỏi được liên kết.
 - Chỉ chuyển sang bước tiếp theo khi người dùng xác nhận vùng ảnh.
 - Lưu ảnh cắt sau xác nhận dưới dạng tài sản độc lập.
@@ -169,6 +174,7 @@ Phân hệ này **không nằm trong combo OCR**.
 ### Giao diện
 
 - React 19 + TypeScript trên nền Vinext/Next-compatible.
+- PDF.js chạy phía trình duyệt để tách PDF thành ảnh PNG từng trang trước OCR.
 - Các workspace tách biệt cho OCR, thư viện, tạo đề, làm nét ảnh, vẽ minh họa
   và quản lý key.
 
@@ -203,7 +209,7 @@ Phân hệ này **không nằm trong combo OCR**.
 ### Giai đoạn 1 — Nền tảng hiện tại
 
 - Hoàn thiện giao diện làm việc chính.
-- Upload và lưu tài liệu.
+- Upload, tách PDF theo trang và lưu từng ảnh trang.
 - Phân tích Layout Map trước, sau đó OCR bằng model người dùng chọn.
 - Phân loại lớp, chủ đề và độ khó.
 - Duyệt vùng ảnh và câu hỏi.

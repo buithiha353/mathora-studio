@@ -25,6 +25,7 @@ type ReviewRegion = {
   label: string;
   regionType: string;
   box: number[];
+  page?: number;
   questionId?: string | null;
   questionCode: string;
 };
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
         .prepare(
           `SELECT id, question_id AS questionId, question_code AS questionCode,
                   label, region_type AS regionType, box_json AS boxJson,
-                  confidence, status
+                  page_number AS page, confidence, status
            FROM image_regions WHERE document_id = ?
            ORDER BY created_at ASC`,
         )
@@ -210,7 +211,7 @@ export async function POST(request: Request) {
           .prepare(
             `UPDATE image_regions
              SET question_id = ?, question_code = ?, label = ?, region_type = ?,
-                 box_json = ?, status = 'CONFIRMED'
+                 box_json = ?, page_number = ?, status = 'CONFIRMED'
              WHERE id = ? AND document_id = ?`,
           )
           .bind(
@@ -223,6 +224,7 @@ export async function POST(request: Request) {
                 Math.max(0, Math.min(100, Number(value) || 0)),
               ),
             ),
+            Math.max(1, Number(region.page) || 1),
             region.id,
             documentId,
           ),

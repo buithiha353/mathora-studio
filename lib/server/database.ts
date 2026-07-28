@@ -37,6 +37,7 @@ const schemaStatements = [
     label TEXT NOT NULL,
     region_type TEXT NOT NULL DEFAULT 'geometry',
     box_json TEXT NOT NULL,
+    page_number INTEGER NOT NULL DEFAULT 1,
     confidence INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'AWAITING_REVIEW',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -166,6 +167,16 @@ const demoQuestions = [
 async function initialize() {
   const db = requireDb();
   await db.batch(schemaStatements.map((statement) => db.prepare(statement)));
+  const regionColumns = await db
+    .prepare("PRAGMA table_info(image_regions)")
+    .all<{ name: string }>();
+  if (!regionColumns.results.some((column) => column.name === "page_number")) {
+    await db
+      .prepare(
+        "ALTER TABLE image_regions ADD COLUMN page_number INTEGER NOT NULL DEFAULT 1",
+      )
+      .run();
+  }
 
   await db.batch(
     demoQuestions.map((question) =>

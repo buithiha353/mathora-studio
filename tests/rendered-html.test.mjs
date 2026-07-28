@@ -90,6 +90,47 @@ test("runs layout mapping before content OCR", async () => {
   assert.match(processRoute, /Đây là bước OCR nội dung chạy SAU/);
 });
 
+test("splits PDF files into PNG pages before Gemini processing", async () => {
+  const [studio, pageRoute, processRoute, packageJson] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../app/api/upload/page/route.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(packageJson, /pdfjs-dist/);
+  assert.match(studio, /renderPdfPages/);
+  assert.match(studio, /page\.render/);
+  assert.match(studio, /api\/upload\/page/);
+  assert.match(pageRoute, /image\/png/);
+  assert.match(pageRoute, /page-\$\{String\(pageNumber\)\.padStart\(4, "0"\)\}\.png/);
+  assert.match(processRoute, /loadSourcePages/);
+  assert.match(processRoute, /for \(const sourcePage of sourcePages\)/);
+  assert.match(processRoute, /mimeType: "image\/png"/);
+  assert.match(processRoute, /buildDocumentLayoutPrompt\(sourcePage\.pageNumber\)/);
+});
+
+test("supports moving and resizing detected image regions", async () => {
+  const [studio, reviewRoute, styles] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/review/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /beginGesture/);
+  assert.match(studio, /moveGesture/);
+  assert.match(studio, /onRegionBoxChange/);
+  assert.match(studio, /region-resize-handle/);
+  assert.match(studio, /Kéo trong khung để di chuyển/);
+  assert.match(studio, /region-coordinate-grid/);
+  assert.match(reviewRoute, /page_number = \?/);
+  assert.match(styles, /touch-action: none/);
+  assert.match(styles, /\.handle-se/);
+});
+
 test("applies the THCS textbook illustration prompt", async () => {
   const [illustrationPrompt, illustrationRoute] = await Promise.all([
     readFile(new URL("../lib/illustration-prompt.ts", import.meta.url), "utf8"),

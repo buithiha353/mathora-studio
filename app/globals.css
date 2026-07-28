@@ -776,6 +776,9 @@ textarea:focus-visible {
   padding: 0;
   background: rgba(223, 244, 122, 0.08);
   border: 1.5px dashed #769b53;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
 }
 
 .region-box:hover,
@@ -790,7 +793,7 @@ textarea:focus-visible {
   border-color: #4c9a7b;
 }
 
-.region-box > span {
+.region-box > .region-box-label {
   position: absolute;
   top: -23px;
   left: -2px;
@@ -807,8 +810,74 @@ textarea:focus-visible {
   border-radius: 4px 4px 4px 0;
 }
 
-.region-box.is-confirmed > span {
+.region-box.is-confirmed > .region-box-label {
   background: #397b62;
+}
+
+.region-resize-handle {
+  position: absolute;
+  z-index: 2;
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  border: 2px solid #315f52;
+  border-radius: 50%;
+}
+
+.handle-nw,
+.handle-ne,
+.handle-sw,
+.handle-se {
+  width: 11px;
+  height: 11px;
+}
+
+.handle-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.handle-n {
+  top: -5px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+
+.handle-ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.handle-e {
+  top: calc(50% - 4px);
+  right: -5px;
+  cursor: ew-resize;
+}
+
+.handle-se {
+  right: -6px;
+  bottom: -6px;
+  cursor: nwse-resize;
+}
+
+.handle-s {
+  bottom: -5px;
+  left: calc(50% - 4px);
+  cursor: ns-resize;
+}
+
+.handle-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.handle-w {
+  top: calc(50% - 4px);
+  left: -5px;
+  cursor: ew-resize;
 }
 
 .stage-footer {
@@ -1126,6 +1195,54 @@ textarea:focus-visible {
   height: 100%;
   background: #5ea583;
   border-radius: inherit;
+}
+
+.region-edit-help {
+  display: grid;
+  gap: 3px;
+  margin: -2px 0 11px;
+  padding: 9px 10px;
+  color: var(--ink-soft);
+  font-size: 8.5px;
+  line-height: 1.45;
+  background: #f2f7f4;
+  border: 1px solid #d9e7df;
+  border-radius: 8px;
+}
+
+.region-edit-help strong {
+  color: var(--forest);
+  font-size: 9.5px;
+}
+
+.region-coordinate-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 13px;
+}
+
+.region-coordinate-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.region-coordinate-grid span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.region-coordinate-grid input {
+  width: 100%;
+  min-width: 0;
+  height: 31px;
+  padding: 0 5px;
+  color: var(--ink);
+  font-size: 9px;
+  background: #fcfdfc;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
 }
 
 .field-group {

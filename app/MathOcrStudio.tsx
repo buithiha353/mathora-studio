@@ -46,12 +46,14 @@ import {
 import {
   ChangeEvent,
   FormEvent,
+  PointerEvent as ReactPointerEvent,
   ReactNode,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { demoIllustrationSpec, demoOcrResult } from "@/lib/demo-data";
 import {
   OCR_MODELS,
@@ -90,6 +92,7 @@ type Region = {
   id: string;
   label: string;
   box: number[];
+  page?: number;
   questionCode: string;
   questionId?: string | null;
   regionType?: "geometry" | "chart" | "table" | "formula";
@@ -213,25 +216,171 @@ function formatFileSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+async function renderPdfPages(
+  file: File,
+  onPage: (page: File, pageNumber: number, totalPages: number) => Promise<void>,
+) {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+  const document = await pdfjs.getDocument({
+    data: new Uint8Array(await file.arrayBuffer()),
+  }).promise;
+  const previews: string[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.min(
+        3,
+        3000 / Math.max(baseViewport.width, baseViewport.height),
+      );
+      const viewport = page.getViewport({ scale });
+      const canvas = window.document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) throw new Error(`Không thể render trang PDF ${pageNumber}.`);
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvas, canvasContext: context, viewport }).promise;
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (value) =>
+            value
+              ? resolve(value)
+              : reject(new Error(`Không thể tạo PNG cho trang ${pageNumber}.`)),
+          "image/png",
+        ),
+      );
+      const pageFile = new File(
+        [blob],
+        `page-${String(pageNumber).padStart(4, "0")}.png`,
+        { type: "image/png" },
+      );
+      await onPage(pageFile, pageNumber, document.numPages);
+      previews.push(URL.createObjectURL(blob));
+      page.cleanup();
+    }
+    return previews;
+  } catch (error) {
+    previews.forEach((url) => URL.revokeObjectURL(url));
+    throw error;
+  } finally {
+    await document.cleanup();
+  }
+}
+
 function DocumentPaper({
   result,
   selectedRegion,
   confirmed,
   onSelectRegion,
+  onRegionBoxChange,
   preview,
   previewType,
+  pagePreviews,
+  currentPage,
 }: {
   result: OcrResult;
   selectedRegion: string;
   confirmed: string[];
   onSelectRegion: (id: string) => void;
+  onRegionBoxChange: (id: string, box: number[]) => void;
   preview: string | null;
   previewType: string | null;
+  pagePreviews: string[];
+  currentPage: number;
 }) {
+  const [gesture, setGesture] = useState<{
+    regionId: string;
+    mode: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    width: number;
+    height: number;
+    box: number[];
+  } | null>(null);
+  const pagePreview = pagePreviews[currentPage - 1] ?? null;
+
+  function beginGesture(
+    event: ReactPointerEvent<HTMLElement>,
+    region: Region,
+    mode: string,
+  ) {
+    const paper = event.currentTarget.closest(".paper");
+    if (!(paper instanceof HTMLElement)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = paper.getBoundingClientRect();
+    setGesture({
+      regionId: region.id,
+      mode,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      width: Math.max(1, bounds.width),
+      height: Math.max(1, bounds.height),
+      box: region.box.slice(0, 4),
+    });
+    event.currentTarget.setPointerCapture(event.pointerId);
+    onSelectRegion(region.id);
+  }
+
+  function moveGesture(event: ReactPointerEvent<HTMLElement>) {
+    const active = gesture;
+    if (!active || active.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const deltaX = ((event.clientX - active.startX) / active.width) * 100;
+    const deltaY = ((event.clientY - active.startY) / active.height) * 100;
+    let [top, left, bottom, right] = active.box;
+    const minWidth = 2;
+    const minHeight = 2;
+
+    if (active.mode === "move") {
+      const width = right - left;
+      const height = bottom - top;
+      left = Math.max(0, Math.min(100 - width, left + deltaX));
+      right = left + width;
+      top = Math.max(0, Math.min(100 - height, top + deltaY));
+      bottom = top + height;
+    } else {
+      if (active.mode.includes("n")) {
+        top = Math.max(0, Math.min(bottom - minHeight, top + deltaY));
+      }
+      if (active.mode.includes("s")) {
+        bottom = Math.min(100, Math.max(top + minHeight, bottom + deltaY));
+      }
+      if (active.mode.includes("w")) {
+        left = Math.max(0, Math.min(right - minWidth, left + deltaX));
+      }
+      if (active.mode.includes("e")) {
+        right = Math.min(100, Math.max(left + minWidth, right + deltaX));
+      }
+    }
+    onRegionBoxChange(active.regionId, [top, left, bottom, right]);
+  }
+
+  function endGesture(event: ReactPointerEvent<HTMLElement>) {
+    if (gesture?.pointerId !== event.pointerId) return;
+    setGesture(null);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
   return (
     <div className="paper-shell" aria-label="Bản xem trước tài liệu">
       <div className="paper">
-        {preview && previewType?.startsWith("image/") ? (
+        {pagePreview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            className="uploaded-preview"
+            src={pagePreview}
+            alt={`Trang ${currentPage} của tài liệu PDF`}
+          />
+        ) : preview && previewType?.startsWith("image/") ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="uploaded-preview" src={preview} alt="Tài liệu đã tải lên" />
         ) : preview && previewType === "application/pdf" ? (
@@ -296,11 +445,12 @@ function DocumentPaper({
           </div>
         )}
 
-        {result.imageRegions.map((region) => {
+        {result.imageRegions
+          .filter((region) => (region.page ?? 1) === currentPage)
+          .map((region) => {
           const [top, left, bottom, right] = region.box;
           return (
-            <button
-              type="button"
+            <div
               key={region.id}
               className={`region-box ${
                 selectedRegion === region.id ? "is-selected" : ""
@@ -308,17 +458,43 @@ function DocumentPaper({
               style={{
                 top: `${top}%`,
                 left: `${left}%`,
-                width: `${Math.max(8, right - left)}%`,
-                height: `${Math.max(6, bottom - top)}%`,
+                width: `${Math.max(2, right - left)}%`,
+                height: `${Math.max(2, bottom - top)}%`,
               }}
+              role="button"
+              tabIndex={0}
+              onPointerDown={(event) => beginGesture(event, region, "move")}
+              onPointerMove={moveGesture}
+              onPointerUp={endGesture}
+              onPointerCancel={endGesture}
               onClick={() => onSelectRegion(region.id)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectRegion(region.id);
+                }
+              }}
               aria-label={`Chọn vùng ${region.label}`}
             >
-              <span>
+              <span className="region-box-label">
                 {confirmed.includes(region.id) ? <Check size={12} /> : null}
                 {region.questionCode} · {region.label}
               </span>
-            </button>
+              {selectedRegion === region.id
+                ? ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map(
+                    (handle) => (
+                      <span
+                        key={handle}
+                        className={`region-resize-handle handle-${handle}`}
+                        onPointerDown={(event) =>
+                          beginGesture(event, region, handle)
+                        }
+                        aria-hidden="true"
+                      />
+                    ),
+                  )
+                : null}
+            </div>
           );
         })}
       </div>
@@ -450,6 +626,7 @@ function ReviewWorkspace({
   result,
   selectedFile,
   selectedPreview,
+  pagePreviews,
   documentId,
   workflowStage,
   onFileChange,
@@ -465,6 +642,7 @@ function ReviewWorkspace({
   result: OcrResult;
   selectedFile: File | null;
   selectedPreview: string | null;
+  pagePreviews: string[];
   documentId: string | null;
   workflowStage: WorkflowStage;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -482,6 +660,9 @@ function ReviewWorkspace({
 }) {
   const [selectedRegion, setSelectedRegion] = useState(
     result.imageRegions[0]?.id ?? "",
+  );
+  const [currentPage, setCurrentPage] = useState(
+    result.imageRegions[0]?.page ?? 1,
   );
   const [confirmedRegions, setConfirmedRegions] = useState<string[]>([]);
   const [confirmedQuestions, setConfirmedQuestions] = useState<string[]>([]);
@@ -506,6 +687,12 @@ function ReviewWorkspace({
   );
   const isBusy = isUploading || isProcessing || isSaving;
 
+  function selectRegion(id: string) {
+    const selected = result.imageRegions.find((item) => item.id === id);
+    setSelectedRegion(id);
+    if (selected) setCurrentPage(selected.page ?? 1);
+  }
+
   function confirmRegion() {
     if (!region) return;
     setConfirmedRegions((current) =>
@@ -516,7 +703,7 @@ function ReviewWorkspace({
     );
     const next = result.imageRegions[currentIndex + 1];
     if (next) {
-      setSelectedRegion(next.id);
+      selectRegion(next.id);
     } else {
       setActivePanel("questions");
     }
@@ -543,6 +730,16 @@ function ReviewWorkspace({
     setConfirmedRegions((current) =>
       current.filter((item) => item !== region.id),
     );
+  }
+
+  function updateRegionBox(id: string, box: number[]) {
+    onResultChange({
+      ...result,
+      imageRegions: result.imageRegions.map((item) =>
+        item.id === id ? { ...item, box } : item,
+      ),
+    });
+    setConfirmedRegions((current) => current.filter((item) => item !== id));
   }
 
   function updateQuestion(patch: Partial<Question>) {
@@ -668,19 +865,30 @@ function ReviewWorkspace({
             result={result}
             selectedRegion={region?.id ?? ""}
             confirmed={confirmedRegions}
-            onSelectRegion={setSelectedRegion}
+            onSelectRegion={selectRegion}
+            onRegionBoxChange={updateRegionBox}
             preview={selectedPreview}
             previewType={selectedFile?.type ?? null}
+            pagePreviews={pagePreviews}
+            currentPage={currentPage}
           />
           <div className="stage-footer">
             <span>
-              Trang <strong>1</strong> / {result.document.pages}
+              Trang <strong>{currentPage}</strong> / {result.document.pages}
             </span>
             <div className="page-dots">
-              <button type="button" className="is-active" aria-label="Trang 1" />
-              <button type="button" aria-label="Trang 2" />
-              <button type="button" aria-label="Trang 3" />
-              <button type="button" aria-label="Trang 4" />
+              {Array.from(
+                { length: Math.max(1, result.document.pages) },
+                (_, index) => index + 1,
+              ).map((page) => (
+                <button
+                  type="button"
+                  key={page}
+                  className={page === currentPage ? "is-active" : ""}
+                  aria-label={`Trang ${page}`}
+                  onClick={() => setCurrentPage(page)}
+                />
+              ))}
             </div>
             <span className="autosave">
               <CircleCheck size={14} />
@@ -738,7 +946,7 @@ function ReviewWorkspace({
                           className={`${item.id === region.id ? "is-active" : ""} ${
                             confirmedRegions.includes(item.id) ? "is-confirmed" : ""
                           }`}
-                          onClick={() => setSelectedRegion(item.id)}
+                          onClick={() => selectRegion(item.id)}
                         >
                           {confirmedRegions.includes(item.id) ? (
                             <Check size={12} />
@@ -770,6 +978,43 @@ function ReviewWorkspace({
                       <div className="confidence-bar">
                         <i style={{ width: `${region.confidence * 100}%` }} />
                       </div>
+                    </div>
+
+                    <div className="region-edit-help">
+                      <strong>Chỉnh vùng trực tiếp</strong>
+                      <span>
+                        Kéo trong khung để di chuyển; kéo các chấm ở cạnh và góc
+                        để đổi kích thước.
+                      </span>
+                    </div>
+
+                    <div className="region-coordinate-grid">
+                      {[
+                        ["Trên", 0],
+                        ["Trái", 1],
+                        ["Dưới", 2],
+                        ["Phải", 3],
+                      ].map(([label, index]) => (
+                        <label key={String(label)}>
+                          <span>{label}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={Number(region.box[Number(index)] ?? 0).toFixed(1)}
+                            onChange={(event) => {
+                              const next = region.box.slice(0, 4);
+                              next[Number(index)] = Math.max(
+                                0,
+                                Math.min(100, Number(event.target.value) || 0),
+                              );
+                              if (next[2] <= next[0] || next[3] <= next[1]) return;
+                              updateRegion({ box: next });
+                            }}
+                          />
+                        </label>
+                      ))}
                     </div>
 
                     <label className="field-group">
@@ -2198,6 +2443,7 @@ export function MathOcrStudio() {
   const [ocrResult, setOcrResult] = useState<OcrResult>(demoOcrResult as OcrResult);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
+  const [pagePreviews, setPagePreviews] = useState<string[]>([]);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [workflowStage, setWorkflowStage] =
     useState<WorkflowStage>("EMPTY");
@@ -2252,6 +2498,8 @@ export function MathOcrStudio() {
 
   async function uploadForOcr(file: File) {
     if (selectedPreview) URL.revokeObjectURL(selectedPreview);
+    pagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setPagePreviews([]);
     const preview = URL.createObjectURL(file);
     setSelectedFile(file);
     setSelectedPreview(preview);
@@ -2275,9 +2523,49 @@ export function MathOcrStudio() {
         error?: string;
       };
       if (!response.ok) throw new Error(payload.error);
-      setDocumentId(payload.document?.id ?? null);
+      const uploadedDocumentId = payload.document?.id ?? null;
+      if (!uploadedDocumentId) throw new Error("Không nhận được mã tài liệu.");
+
+      let totalPages = 1;
+      if (file.type === "application/pdf") {
+        const previews = await renderPdfPages(
+          file,
+          async (page, pageNumber, pageCount) => {
+            setNotice(`Đang tách PDF: trang ${pageNumber}/${pageCount}…`);
+            const pageForm = new FormData();
+            pageForm.append("documentId", uploadedDocumentId);
+            pageForm.append("pageNumber", String(pageNumber));
+            pageForm.append("totalPages", String(pageCount));
+            pageForm.append("page", page);
+            const pageResponse = await fetch(`${API_BASE_PATH}/api/upload/page`, {
+              method: "POST",
+              body: pageForm,
+            });
+            const pagePayload = (await pageResponse.json()) as {
+              error?: string;
+            };
+            if (!pageResponse.ok) throw new Error(pagePayload.error);
+            totalPages = pageCount;
+          },
+        );
+        setPagePreviews(previews);
+      }
+
+      setOcrResult({
+        ...demoOcrResult,
+        document: {
+          ...demoOcrResult.document,
+          name: file.name,
+          pages: totalPages,
+        },
+      } as OcrResult);
+      setDocumentId(uploadedDocumentId);
       setWorkflowStage("UPLOADED");
-      setNotice(`Đã tải ${file.name} · ${formatFileSize(file.size)}`);
+      setNotice(
+        file.type === "application/pdf"
+          ? `Đã tách ${file.name} thành ${totalPages} trang PNG · sẵn sàng nhận diện`
+          : `Đã tải ${file.name} · ${formatFileSize(file.size)}`,
+      );
       await loadOverview();
       return true;
     } catch (error) {
@@ -2365,6 +2653,7 @@ export function MathOcrStudio() {
             label: region.label,
             regionType: region.regionType ?? "geometry",
             box: region.box,
+            page: region.page ?? 1,
             questionId:
               region.questionId ??
               ocrResult.questions.find(
@@ -2413,6 +2702,7 @@ export function MathOcrStudio() {
           result={ocrResult}
           selectedFile={selectedFile}
           selectedPreview={selectedPreview}
+          pagePreviews={pagePreviews}
           documentId={documentId}
           workflowStage={workflowStage}
           onFileChange={handleFileChange}
