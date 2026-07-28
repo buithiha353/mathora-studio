@@ -1,5 +1,5 @@
 import { demoOcrResult } from "@/lib/demo-data";
-import { OCR_MODEL_ID } from "@/lib/gemini-models";
+import { buildDocumentLayoutPrompt } from "@/lib/layout-prompt";
 import { requireFiles } from "@/lib/server/bindings";
 import { ensureDatabase } from "@/lib/server/database";
 import {
@@ -7,7 +7,57 @@ import {
   NoGeminiKeyError,
 } from "@/lib/server/gemini";
 
-const ocrSchema = {
+const layoutRegionTypes = [
+  "TITLE",
+  "SECTION",
+  "QUESTION_NUMBER",
+  "TEXT",
+  "FORMULA",
+  "IMAGE",
+  "TABLE",
+  "GRAPH",
+  "GEOMETRY",
+  "DIAGRAM",
+  "FOOTNOTE",
+  "HEADER",
+  "FOOTER",
+  "UNKNOWN",
+];
+
+const layoutSchema = {
+  type: "OBJECT",
+  properties: {
+    page: { type: "INTEGER" },
+    width: { type: "INTEGER" },
+    height: { type: "INTEGER" },
+    regions: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: { type: "STRING" },
+          type: { type: "STRING", enum: layoutRegionTypes },
+          bbox: {
+            type: "OBJECT",
+            properties: {
+              left: { type: "INTEGER" },
+              top: { type: "INTEGER" },
+              right: { type: "INTEGER" },
+              bottom: { type: "INTEGER" },
+            },
+            required: ["left", "top", "right", "bottom"],
+          },
+          confidence: { type: "NUMBER" },
+          need_review: { type: "BOOLEAN" },
+        },
+        required: ["id", "type", "bbox", "confidence", "need_review"],
+      },
+    },
+  },
+  required: ["page", "width", "height", "regions"],
+};
+
+const contentOcrSchema = {
   type: "OBJECT",
   properties: {
     document: {
@@ -94,6 +144,77 @@ type OcrResult = {
   questions: OcrQuestion[];
 };
 
+type LayoutRegion = {
+  id: string;
+  type: string;
+  bbox: { left: number; top: number; right: number; bottom: number };
+  confidence: number;
+  need_review: boolean;
+};
+
+type LayoutMap = {
+  page: number;
+  width: number;
+  height: number;
+  regions: LayoutRegion[];
+};
+
+function normalizeLayoutMap(input: LayoutMap): LayoutMap {
+  const width = Math.max(1, Math.round(Number(input.width) || 1));
+  const height = Math.max(1, Math.round(Number(input.height) || 1));
+  const seenIds = new Set<string>();
+  const regions = (Array.isArray(input.regions) ? input.regions : [])
+    .map((region, index) => {
+      const confidence = normalizeConfidence(region.confidence);
+      const baseId = String(region.id || `${region.type}_${index + 1}`);
+      let id = baseId;
+      let suffix = 2;
+      while (seenIds.has(id)) {
+        id = `${baseId}_${suffix}`;
+        suffix += 1;
+      }
+      seenIds.add(id);
+
+      const left = Math.max(
+        0,
+        Math.min(width, Math.round(Number(region.bbox?.left) || 0)),
+      );
+      const top = Math.max(
+        0,
+        Math.min(height, Math.round(Number(region.bbox?.top) || 0)),
+      );
+      const right = Math.max(
+        left,
+        Math.min(width, Math.round(Number(region.bbox?.right) || left)),
+      );
+      const bottom = Math.max(
+        top,
+        Math.min(height, Math.round(Number(region.bbox?.bottom) || top)),
+      );
+
+      return {
+        id,
+        type: layoutRegionTypes.includes(region.type) ? region.type : "UNKNOWN",
+        bbox: { left, top, right, bottom },
+        confidence,
+        need_review: confidence < 0.95,
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.bbox.top - b.bbox.top ||
+        a.bbox.left - b.bbox.left ||
+        a.bbox.bottom - b.bbox.bottom,
+    );
+
+  return {
+    page: Math.max(1, Math.round(Number(input.page) || 1)),
+    width,
+    height,
+    regions,
+  };
+}
+
 function normalizeConfidence(value: number) {
   const numeric = Number(value) || 0;
   return Math.max(0, Math.min(1, numeric > 1 ? numeric / 100 : numeric));
@@ -105,6 +226,46 @@ function inferRegionType(label: string) {
   if (normalized.includes("đồ thị") || normalized.includes("biểu đồ")) return "chart";
   if (normalized.includes("công thức")) return "formula";
   return "geometry";
+}
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+function layoutRegionType(type: string) {
+  if (type === "TABLE") return "table";
+  if (type === "GRAPH") return "chart";
+  if (type === "FORMULA") return "formula";
+  return "geometry";
+}
+
+function reviewRegionsFromLayout(layout: LayoutMap): OcrRegion[] {
+  const reviewTypes = new Set([
+    "FORMULA",
+    "IMAGE",
+    "TABLE",
+    "GRAPH",
+    "GEOMETRY",
+    "DIAGRAM",
+  ]);
+  const width = Math.max(1, Number(layout.width) || 1);
+  const height = Math.max(1, Number(layout.height) || 1);
+
+  return (Array.isArray(layout.regions) ? layout.regions : [])
+    .filter((region) => reviewTypes.has(region.type))
+    .map((region) => ({
+      id: region.id,
+      label: region.type,
+      box: [
+        clampPercent((Number(region.bbox?.top) / height) * 100),
+        clampPercent((Number(region.bbox?.left) / width) * 100),
+        clampPercent((Number(region.bbox?.bottom) / height) * 100),
+        clampPercent((Number(region.bbox?.right) / width) * 100),
+      ],
+      questionCode: "",
+      regionType: layoutRegionType(region.type),
+      confidence: normalizeConfidence(region.confidence),
+    }));
 }
 
 export async function POST(request: Request) {
@@ -151,20 +312,32 @@ export async function POST(request: Request) {
     const base64 = btoa(binary);
 
     let result: OcrResult;
+    let layoutMap: LayoutMap | null = null;
     let mode = "gemini";
     let model: string | null = null;
 
     try {
-      const response = await callGeminiStructured({
-        model: OCR_MODEL_ID,
+      const layoutResponse = await callGeminiStructured({
         mimeType: document.mimeType,
         data: base64,
-        schema: ocrSchema,
+        schema: layoutSchema,
+        prompt: buildDocumentLayoutPrompt(1),
+      });
+      layoutMap = normalizeLayoutMap(layoutResponse.data as LayoutMap);
+
+      const response = await callGeminiStructured({
+        model: layoutResponse.model,
+        mimeType: document.mimeType,
+        data: base64,
+        schema: contentOcrSchema,
         prompt: `Bạn là hệ thống OCR đề thi Toán THCS tiếng Việt dành cho các lớp 6, 7, 8 và 9.
-Đọc tài liệu theo thứ tự thị giác. Bảo toàn mọi công thức dưới dạng LaTeX.
-Phát hiện vùng hình học, đồ thị, bảng và hình minh họa bằng box [ymin, xmin, ymax, xmax] chuẩn hóa 0-100.
+Đây là bước OCR nội dung chạy SAU bước Document Layout AI. Đọc theo đúng thứ tự và ranh giới vùng trong Layout Map dưới đây. Bảo toàn mọi công thức dưới dạng LaTeX.
+Không thay đổi bbox của Layout Map và không gộp các vùng khác loại.
 Tách chính xác từng câu hỏi, xác định khối lớp từ 6 đến 9, phân loại theo mảng kiến thức Toán THCS và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
-Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".`,
+Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".
+
+Layout Map:
+${JSON.stringify(layoutMap)}`,
       });
       result = response.data as OcrResult;
       model = response.model;
@@ -189,16 +362,19 @@ Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài li
     const questionIds = new Map(
       questions.map((question) => [question.code, question.id]),
     );
-    const imageRegions = (
-      Array.isArray(result.imageRegions) ? result.imageRegions : []
-    ).map((region, index) => ({
+    const detectedRegions = layoutMap
+      ? reviewRegionsFromLayout(layoutMap)
+      : Array.isArray(result.imageRegions)
+        ? result.imageRegions
+        : [];
+    const imageRegions = detectedRegions.map((region, index) => ({
       ...region,
       id: `${documentId}-r-${index + 1}`,
       box: Array.from({ length: 4 }, (_, boxIndex) =>
         Math.max(0, Math.min(100, Number(region.box?.[boxIndex]) || 0)),
       ),
       questionId: questionIds.get(region.questionCode) ?? null,
-      regionType: inferRegionType(region.label),
+      regionType: region.regionType ?? inferRegionType(region.label),
       confidence: normalizeConfidence(region.confidence),
     }));
     result = { ...result, questions, imageRegions };
@@ -258,7 +434,7 @@ Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài li
       ],
     );
 
-    return Response.json({ result, mode, model });
+    return Response.json({ result, layoutMap, mode, model });
   } catch (error) {
     return Response.json(
       {

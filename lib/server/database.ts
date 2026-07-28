@@ -48,7 +48,7 @@ const schemaStatements = [
     cipher_text TEXT NOT NULL,
     iv TEXT NOT NULL,
     hint TEXT NOT NULL,
-    model TEXT NOT NULL DEFAULT 'gemini-3.5-flash',
+    model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite',
     priority INTEGER NOT NULL DEFAULT 1,
     usage_count INTEGER NOT NULL DEFAULT 0,
     failure_count INTEGER NOT NULL DEFAULT 0,
@@ -92,8 +92,12 @@ const schemaStatements = [
   "CREATE INDEX IF NOT EXISTS api_keys_status_idx ON api_keys(status, priority)",
   "CREATE INDEX IF NOT EXISTS documents_status_idx ON documents(status)",
   `UPDATE api_keys
-   SET model = 'gemini-3.5-flash'
-   WHERE model <> 'gemini-3.5-flash'`,
+   SET model = 'gemini-3.5-flash-lite'
+   WHERE model NOT IN (
+     'gemini-2.5-flash',
+     'gemini-3.5-flash-lite',
+     'gemini-3.1-flash-lite'
+   )`,
 ];
 
 const demoQuestions = [

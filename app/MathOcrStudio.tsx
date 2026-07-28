@@ -53,7 +53,12 @@ import {
   useState,
 } from "react";
 import { demoIllustrationSpec, demoOcrResult } from "@/lib/demo-data";
-import { OCR_MODEL_ID, OCR_MODEL_LABEL } from "@/lib/gemini-models";
+import {
+  OCR_MODELS,
+  OCR_MODEL_ID,
+  OCR_MODEL_LABEL,
+  ocrModelLabel,
+} from "@/lib/gemini-models";
 
 const API_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -101,7 +106,6 @@ type OcrResult = {
 type ApiKeyItem = {
   id: string;
   label: string;
-  projectId: string;
   hint: string;
   model: string;
   priority: number;
@@ -456,6 +460,7 @@ function ReviewWorkspace({
   onResultChange,
   onSaveReview,
   processingMode,
+  processingModel,
 }: {
   result: OcrResult;
   selectedFile: File | null;
@@ -473,6 +478,7 @@ function ReviewWorkspace({
     confirmedRegionIds: string[],
   ) => Promise<void>;
   processingMode: string | null;
+  processingModel: string | null;
 }) {
   const [selectedRegion, setSelectedRegion] = useState(
     result.imageRegions[0]?.id ?? "",
@@ -624,7 +630,7 @@ function ReviewWorkspace({
           <span className={`mode-pill ${processingMode === "gemini" ? "live" : ""}`}>
             <Sparkles size={13} />
             {processingMode === "gemini"
-              ? OCR_MODEL_LABEL
+              ? ocrModelLabel(processingModel ?? OCR_MODEL_ID)
               : processingMode === "demo"
                 ? "Bản mẫu an toàn"
                 : `${OCR_MODEL_LABEL} sẵn sàng`}
@@ -1959,9 +1965,8 @@ function SettingsView({
   onNotice: (message: string) => void;
 }) {
   const [label, setLabel] = useState("");
-  const [projectId, setProjectId] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState(OCR_MODEL_ID);
+  const [model, setModel] = useState<string>(OCR_MODEL_ID);
   const [priority, setPriority] = useState(5);
   const [saving, setSaving] = useState(false);
 
@@ -1972,7 +1977,7 @@ function SettingsView({
       const response = await fetch(`${API_BASE_PATH}/api/keys`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ label, projectId, apiKey, model, priority }),
+        body: JSON.stringify({ label, apiKey, model, priority }),
       });
       const payload = (await response.json()) as {
         error?: string;
@@ -1980,7 +1985,6 @@ function SettingsView({
       };
       if (!response.ok) throw new Error(payload.error);
       setLabel("");
-      setProjectId("");
       setApiKey("");
       await refreshKeys();
       onNotice(payload.warning ?? "API key đã được kiểm tra và mã hóa.");
@@ -2048,8 +2052,8 @@ function SettingsView({
                     <code>{key.hint}</code>
                   </div>
                   <div className="key-project">
-                    <small>Project</small>
-                    <span>{key.projectId}</span>
+                    <small>Model</small>
+                    <span>{ocrModelLabel(key.model)}</span>
                   </div>
                   <div className="key-usage">
                     <small>Lượt gọi</small>
@@ -2100,15 +2104,6 @@ function SettingsView({
                   required
                 />
               </label>
-              <label className="field-group">
-                <span>Google Cloud project</span>
-                <input
-                  value={projectId}
-                  onChange={(event) => setProjectId(event.target.value)}
-                  placeholder="mathora-production"
-                  required
-                />
-              </label>
               <label className="field-group span-2">
                 <span>API key</span>
                 <div className="secret-input">
@@ -2125,9 +2120,13 @@ function SettingsView({
               <label className="field-group">
                 <span>Model nhận diện đề</span>
                 <select value={model} onChange={(event) => setModel(event.target.value)}>
-                  <option value={OCR_MODEL_ID}>{OCR_MODEL_LABEL}</option>
+                  {OCR_MODELS.map((option) => (
+                    <option value={option.id} key={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
-                <small>Model ổn định được ghim riêng cho bước nhận diện OCR.</small>
+                <small>Mỗi API key có thể dùng một model nhận diện riêng.</small>
               </label>
               <label className="field-group">
                 <span>Độ ưu tiên: {priority}</span>
@@ -2154,7 +2153,7 @@ function SettingsView({
             </span>
             <h3>Xoay vòng theo sức khỏe</h3>
             <p>
-              Hệ thống chọn key theo project, ưu tiên và lượng tải; tự cooldown khi
+              Hệ thống chọn key theo model, ưu tiên và lượng tải; tự cooldown khi
               gặp lỗi tạm thời.
             </p>
             <div className="mini-flow">
@@ -2207,6 +2206,7 @@ export function MathOcrStudio() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [processingMode, setProcessingMode] = useState<string | null>("demo");
+  const [processingModel, setProcessingModel] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const questions = useMemo(
@@ -2258,6 +2258,7 @@ export function MathOcrStudio() {
     setDocumentId(null);
     setWorkflowStage("EMPTY");
     setProcessingMode(null);
+    setProcessingModel(null);
     setReviewNonce((current) => current + 1);
     setIsUploading(true);
 
@@ -2320,6 +2321,7 @@ export function MathOcrStudio() {
       if (!response.ok) throw new Error(payload.error);
       if (payload.result) setOcrResult(payload.result);
       setProcessingMode(payload.mode ?? "demo");
+      setProcessingModel(payload.model ?? null);
       setWorkflowStage("REVIEW");
       setReviewNonce((current) => current + 1);
       setNotice(
@@ -2421,6 +2423,7 @@ export function MathOcrStudio() {
           onResultChange={setOcrResult}
           onSaveReview={saveReview}
           processingMode={processingMode}
+          processingModel={processingModel}
         />
       ) : null}
       {view === "library" ? (

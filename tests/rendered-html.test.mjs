@@ -43,7 +43,7 @@ test("requires human review before questions can enter exams", async () => {
   assert.doesNotMatch(examRoute, /AWAITING_REVIEW/);
 });
 
-test("pins OCR recognition to the stable Gemini 3.5 Flash model", async () => {
+test("supports selectable Gemini models for document recognition", async () => {
   const [models, gemini, processRoute, keysRoute, studio] = await Promise.all([
     readFile(new URL("../lib/gemini-models.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/gemini.ts", import.meta.url), "utf8"),
@@ -52,9 +52,12 @@ test("pins OCR recognition to the stable Gemini 3.5 Flash model", async () => {
     readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(models, /gemini-3\.5-flash/);
-  assert.match(processRoute, /model: OCR_MODEL_ID/);
-  assert.match(keysRoute, /models\/\$\{OCR_MODEL_ID\}:generateContent/);
+  assert.match(models, /gemini-2\.5-flash/);
+  assert.match(models, /gemini-3\.5-flash-lite/);
+  assert.match(models, /gemini-3\.1-flash-lite/);
+  assert.match(processRoute, /model: layoutResponse\.model/);
+  assert.match(keysRoute, /encodeURIComponent\(model\)/);
+  assert.match(keysRoute, /isOcrModel/);
   assert.match(keysRoute, /x-goog-api-key/);
   assert.match(keysRoute, /geminiErrorSummary/);
   assert.match(gemini, /x-goog-api-key/);
@@ -62,7 +65,29 @@ test("pins OCR recognition to the stable Gemini 3.5 Flash model", async () => {
   assert.doesNotMatch(keysRoute, /\?key=/);
   assert.doesNotMatch(gemini, /\?key=/);
   assert.match(studio, /Nhận diện AI/);
+  assert.match(studio, /OCR_MODELS\.map/);
+  assert.doesNotMatch(studio, /Google Cloud project/);
+  assert.doesNotMatch(keysRoute, /projectId\?/);
   assert.doesNotMatch(gemini, /temperature|top_p|top_k/);
+});
+
+test("runs layout mapping before content OCR", async () => {
+  const [layoutPrompt, processRoute] = await Promise.all([
+    readFile(new URL("../lib/layout-prompt.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(layoutPrompt, /Document Layout AI/);
+  assert.match(layoutPrompt, /KHÔNG OCR nội dung/);
+  assert.match(layoutPrompt, /QUESTION_NUMBER/);
+  assert.match(layoutPrompt, /Tọa độ theo PIXEL/);
+  assert.match(layoutPrompt, /need_review=true/);
+  assert.match(layoutPrompt, /Chỉ trả về JSON hợp lệ/);
+  assert.match(processRoute, /schema: layoutSchema/);
+  assert.match(processRoute, /buildDocumentLayoutPrompt/);
+  assert.match(processRoute, /normalizeLayoutMap/);
+  assert.match(processRoute, /reviewRegionsFromLayout/);
+  assert.match(processRoute, /Đây là bước OCR nội dung chạy SAU/);
 });
 
 test("applies the THCS textbook illustration prompt", async () => {

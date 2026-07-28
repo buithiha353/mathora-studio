@@ -31,8 +31,16 @@ trong quy trình OCR.
 
 ### 3.2. Nhận diện bằng AI
 
-- Dùng model ổn định `gemini-3.5-flash`.
-- Đọc nội dung theo đúng thứ tự thị giác của đề.
+- Bước 1 chỉ phân tích bố cục bằng Document Layout AI, không OCR nội dung.
+- Layout Map phải liệt kê toàn bộ vùng theo đúng thứ tự đọc, dùng tọa độ pixel
+  của ảnh trang gốc và đánh dấu `need_review` khi độ tin cậy dưới 0,95.
+- Không gộp vùng khác loại; đặc biệt tách riêng số câu, văn bản, công thức,
+  ảnh thực tế, bảng, đồ thị, hình học và sơ đồ.
+- Bước 2 mới OCR nội dung dựa trên ranh giới và thứ tự của Layout Map.
+- Cho phép mỗi API key chọn một trong các model:
+  `gemini-2.5-flash`, `gemini-3.5-flash-lite` hoặc
+  `gemini-3.1-flash-lite`.
+- Đọc nội dung theo đúng thứ tự thị giác đã xác định.
 - Nhận diện văn bản tiếng Việt và ký hiệu Toán THCS.
 - Chuyển công thức sang LaTeX nhưng vẫn giữ nội dung gốc để đối chiếu.
 - Phát hiện hình học, đồ thị, bảng, biểu đồ và hình minh họa.
@@ -146,10 +154,12 @@ Phân hệ này **không nằm trong combo OCR**.
 ## 7. Quản lý Gemini API key
 
 - Lưu nhiều API key đã mã hóa.
+- Không yêu cầu người dùng nhập tên Google Cloud project.
+- Cho phép chọn model nhận diện riêng khi thêm từng key.
 - Kiểm tra key bằng một request `generateContent` tối thiểu.
 - Gửi key qua header `x-goog-api-key`, không đưa key vào URL.
 - Xoay vòng theo độ ưu tiên, lượt sử dụng và tình trạng quota.
-- Tạm cooldown key hoặc project khi gặp lỗi 429.
+- Tạm cooldown key khi gặp lỗi 429.
 - Chỉ đánh dấu key không hợp lệ với lỗi xác thực hoặc phân quyền rõ ràng.
 - Hiển thị thông báo lỗi đã làm sạch từ Google và không làm lộ secret.
 - Khi triển khai production, kiểm tra API từ chính IP đầu ra của backend.
@@ -186,7 +196,7 @@ Phân hệ này **không nằm trong combo OCR**.
 - Giới hạn loại tệp, dung lượng, thời gian xử lý và số lần gọi.
 - Ghi log mã lỗi và request ID nhưng không ghi nội dung secret.
 - Sao lưu dữ liệu thư viện và tài sản R2.
-- Theo dõi quota, lỗi theo project và trạng thái deployment.
+- Theo dõi quota, lỗi theo key/model và trạng thái deployment.
 
 ## 10. Lộ trình
 
@@ -194,7 +204,7 @@ Phân hệ này **không nằm trong combo OCR**.
 
 - Hoàn thiện giao diện làm việc chính.
 - Upload và lưu tài liệu.
-- OCR bằng Gemini 3.5 Flash.
+- Phân tích Layout Map trước, sau đó OCR bằng model người dùng chọn.
 - Phân loại lớp, chủ đề và độ khó.
 - Duyệt vùng ảnh và câu hỏi.
 - Thư viện câu hỏi và bản xem trước tạo đề.

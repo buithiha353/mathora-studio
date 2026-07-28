@@ -1,11 +1,10 @@
 import { encryptSecret } from "@/lib/server/crypto";
 import { ensureDatabase } from "@/lib/server/database";
 import { geminiErrorSummary } from "@/lib/server/gemini-error";
-import { OCR_MODEL_ID } from "@/lib/gemini-models";
+import { isOcrModel, OCR_MODEL_ID } from "@/lib/gemini-models";
 
 type KeyPayload = {
   label?: string;
-  projectId?: string;
   apiKey?: string;
   priority?: number;
   model?: string;
@@ -16,7 +15,7 @@ export async function GET() {
     const db = await ensureDatabase();
     const rows = await db
       .prepare(
-        `SELECT id, label, project_id AS projectId, hint, model, priority,
+        `SELECT id, label, hint, model, priority,
                 usage_count AS usageCount, failure_count AS failureCount,
                 status, cooldown_until AS cooldownUntil,
                 last_used_at AS lastUsedAt, created_at AS createdAt
@@ -37,20 +36,26 @@ export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as KeyPayload;
     const label = payload.label?.trim() ?? "";
-    const projectId = payload.projectId?.trim() ?? "";
     const apiKey = payload.apiKey?.trim() ?? "";
-    const model = OCR_MODEL_ID;
+    const requestedModel = payload.model?.trim() ?? OCR_MODEL_ID;
     const priority = Math.max(1, Math.min(10, Number(payload.priority ?? 1)));
 
-    if (!label || !projectId || apiKey.length < 20) {
+    if (!label || apiKey.length < 20) {
       return Response.json(
-        { error: "Tên key, project và API key hợp lệ là bắt buộc." },
+        { error: "Tên gợi nhớ và API key hợp lệ là bắt buộc." },
         { status: 400 },
       );
     }
+    if (!isOcrModel(requestedModel)) {
+      return Response.json(
+        { error: "Model nhận diện không được hỗ trợ." },
+        { status: 400 },
+      );
+    }
+    const model = requestedModel;
 
     const test = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${OCR_MODEL_ID}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
       const detail = await geminiErrorSummary(test);
       return Response.json(
         {
-          error: `Không thể dùng ${OCR_MODEL_ID}. Google trả về ${test.status}: ${detail}`,
+          error: `Không thể dùng ${model}. Google trả về ${test.status}: ${detail}`,
         },
         { status: 400 },
       );
@@ -87,6 +92,7 @@ export async function POST(request: Request) {
 
     const encrypted = await encryptSecret(apiKey);
     const id = crypto.randomUUID();
+    const rotationGroup = id;
     const hint = `${apiKey.slice(0, 5)}••••${apiKey.slice(-4)}`;
     const db = await ensureDatabase();
     await db
@@ -98,7 +104,7 @@ export async function POST(request: Request) {
       .bind(
         id,
         label,
-        projectId,
+        rotationGroup,
         encrypted.cipherText,
         encrypted.iv,
         hint,
@@ -112,7 +118,6 @@ export async function POST(request: Request) {
         key: {
           id,
           label,
-          projectId,
           hint,
           model,
           priority,
