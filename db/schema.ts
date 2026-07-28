@@ -91,3 +91,8 @@ export const illustrations = sqliteTable("illustrations", {
   status: text("status").notNull().default("AWAITING_REVIEW"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const appMigrations = sqliteTable("app_migrations", {
+  id: text("id").primaryKey(),
+  appliedAt: text("applied_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

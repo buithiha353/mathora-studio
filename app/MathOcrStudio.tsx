@@ -99,6 +99,13 @@ type QuestionAsset = {
   sourceUrl: string;
 };
 
+type OcrImageOption = {
+  id: string;
+  label: string;
+  preview: string;
+  file?: File;
+};
+
 type Region = {
   id: string;
   label: string;
@@ -1297,7 +1304,7 @@ function ReviewWorkspace({
                     </label>
 
                     <label className="field-group">
-                      <span>LaTeX công thức</span>
+                      <span>LaTeX ToggleTeX · dùng cặp dấu $...$</span>
                       <textarea
                         className="formula-editor"
                         value={question.latex}
@@ -2163,9 +2170,11 @@ async function enhanceImage(file: File, level: EnhanceLevel) {
 function EnhanceView({
   onNotice,
   onSendToOcr,
+  ocrImages,
 }: {
   onNotice: (message: string) => void;
   onSendToOcr: (file: File) => Promise<void>;
+  ocrImages: OcrImageOption[];
 }) {
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
@@ -2174,6 +2183,8 @@ function EnhanceView({
   const [level, setLevel] = useState<EnhanceLevel>("MEDIUM");
   const [dimensions, setDimensions] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [showOcrPicker, setShowOcrPicker] = useState(false);
+  const [loadingOcrImage, setLoadingOcrImage] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const sourceUrl = useRef<string | null>(null);
   const enhancedUrl = useRef<string | null>(null);
@@ -2186,9 +2197,7 @@ function EnhanceView({
     [],
   );
 
-  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  function setSourceFileForEnhancement(file: File) {
     if (sourceUrl.current) URL.revokeObjectURL(sourceUrl.current);
     if (enhancedUrl.current) URL.revokeObjectURL(enhancedUrl.current);
     sourceUrl.current = URL.createObjectURL(file);
@@ -2199,6 +2208,36 @@ function EnhanceView({
     setEnhancedPreview(null);
     setDimensions("");
     onNotice(`Đã chọn ${file.name} · ảnh gốc được giữ nguyên.`);
+  }
+
+  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setSourceFileForEnhancement(file);
+  }
+
+  async function chooseOcrImage(option: OcrImageOption) {
+    setLoadingOcrImage(option.id);
+    try {
+      let file = option.file;
+      if (!file) {
+        const response = await fetch(option.preview);
+        if (!response.ok) throw new Error("Không thể đọc ảnh OCR đã chọn.");
+        const blob = await response.blob();
+        file = new File([blob], `${option.label.replace(/\s+/g, "-")}.png`, {
+          type: blob.type || "image/png",
+        });
+      }
+      setSourceFileForEnhancement(file);
+      setShowOcrPicker(false);
+      onNotice(`Đã lấy ${option.label} từ phiên OCR hiện tại để làm nét.`);
+    } catch (error) {
+      onNotice(
+        error instanceof Error ? error.message : "Không thể lấy ảnh từ OCR.",
+      );
+    } finally {
+      setLoadingOcrImage(null);
+    }
   }
 
   async function runEnhancement() {
@@ -2267,6 +2306,46 @@ function EnhanceView({
                 : "Xử lý ngay trên thiết bị, không ghi đè tệp gốc"}
             </small>
           </button>
+
+          <div className="ocr-image-source">
+            <button
+              type="button"
+              className="button button-quiet"
+              disabled={ocrImages.length === 0}
+              onClick={() => setShowOcrPicker((current) => !current)}
+            >
+              <ScanLine size={16} />
+              Lấy ảnh từ OCR
+              <ChevronDown size={15} />
+            </button>
+            <small>
+              {ocrImages.length
+                ? `${ocrImages.length} ảnh/trang đang có trong Bàn xử lý`
+                : "Chưa có ảnh trong phiên OCR hiện tại"}
+            </small>
+          </div>
+
+          {showOcrPicker && ocrImages.length ? (
+            <div className="ocr-image-picker" aria-label="Chọn ảnh từ OCR">
+              {ocrImages.map((option) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  disabled={loadingOcrImage !== null}
+                  onClick={() => void chooseOcrImage(option)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={option.preview} alt="" />
+                  <span>{option.label}</span>
+                  {loadingOcrImage === option.id ? (
+                    <i className="spinner" />
+                  ) : (
+                    <ChevronRight size={15} />
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="field-group">
             <span>Mức làm nét</span>
@@ -2819,6 +2898,29 @@ export function MathOcrStudio() {
     () => overview.questions as Question[],
     [overview.questions],
   );
+  const ocrImageOptions = useMemo<OcrImageOption[]>(() => {
+    if (pagePreviews.length) {
+      return pagePreviews.map((preview, index) => ({
+        id: `ocr-page-${index + 1}`,
+        label: `Trang OCR ${index + 1}`,
+        preview,
+      }));
+    }
+    if (
+      selectedFile?.type.startsWith("image/") &&
+      selectedPreview
+    ) {
+      return [
+        {
+          id: "ocr-source-image",
+          label: selectedFile.name,
+          preview: selectedPreview,
+          file: selectedFile,
+        },
+      ];
+    }
+    return [];
+  }, [pagePreviews, selectedFile, selectedPreview]);
 
   async function loadOverview() {
     try {
@@ -3063,7 +3165,7 @@ export function MathOcrStudio() {
           keys.filter((key) => key.status === "ACTIVE").length
         }
       />
-      {view === "review" ? (
+      <div className="workspace-view" hidden={view !== "review"}>
         <ReviewWorkspace
           key={reviewNonce}
           result={ocrResult}
@@ -3082,16 +3184,24 @@ export function MathOcrStudio() {
           processingMode={processingMode}
           processingModel={processingModel}
         />
-      ) : null}
-      {view === "library" ? (
+      </div>
+      <div className="workspace-view" hidden={view !== "library"}>
         <LibraryView questions={questions} onCreateExam={() => setView("exam")} />
-      ) : null}
-      {view === "exam" ? <ExamView questions={questions} onNotice={setNotice} /> : null}
-      {view === "enhance" ? (
-        <EnhanceView onNotice={setNotice} onSendToOcr={sendEnhancedToOcr} />
-      ) : null}
-      {view === "illustration" ? <IllustrationView onNotice={setNotice} /> : null}
-      {view === "settings" ? (
+      </div>
+      <div className="workspace-view" hidden={view !== "exam"}>
+        <ExamView questions={questions} onNotice={setNotice} />
+      </div>
+      <div className="workspace-view" hidden={view !== "enhance"}>
+        <EnhanceView
+          onNotice={setNotice}
+          onSendToOcr={sendEnhancedToOcr}
+          ocrImages={ocrImageOptions}
+        />
+      </div>
+      <div className="workspace-view" hidden={view !== "illustration"}>
+        <IllustrationView onNotice={setNotice} />
+      </div>
+      <div className="workspace-view" hidden={view !== "settings"}>
         <SettingsView
           keys={keys}
           refreshKeys={async () => {
@@ -3100,7 +3210,7 @@ export function MathOcrStudio() {
           }}
           onNotice={setNotice}
         />
-      ) : null}
+      </div>
       {notice ? (
         <div className="toast" role="status">
           <CircleCheck size={17} />

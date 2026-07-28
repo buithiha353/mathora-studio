@@ -21,7 +21,7 @@ test("defines the complete Mathora Studio workspace", async () => {
   assert.match(studio, /Tạo đề theo ma trận/);
   assert.match(studio, /Hình dung bài toán thực tế/);
   assert.match(studio, /Đưa vào thư viện/);
-  assert.match(studio, /LaTeX công thức/);
+  assert.match(studio, /LaTeX ToggleTeX/);
   assert.match(studio, /Xoay vòng theo sức khỏe/);
   assert.doesNotMatch(studio, /codex-preview|Your site is taking shape/i);
 });
@@ -57,6 +57,52 @@ test("keeps the library free of initial sample questions", async () => {
   assert.match(database, /question_ids_json LIKE '%q-demo-%'/);
   assert.match(studio, /questions: \[\] as Question\[\]/);
   assert.match(overviewRoute, /"Cache-Control": "no-store"/);
+});
+
+test("clears the complete legacy library once without deleting future questions", async () => {
+  const database = await readFile(
+    new URL("../lib/server/database.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(database, /CREATE TABLE IF NOT EXISTS app_migrations/);
+  assert.match(database, /2026-07-29-clear-library-v16/);
+  assert.match(database, /DELETE FROM exams/);
+  assert.match(database, /DELETE FROM image_regions/);
+  assert.match(database, /UPDATE illustrations SET question_id = NULL/);
+  assert.match(database, /DELETE FROM questions/);
+  assert.match(database, /if \(!libraryAlreadyCleared\)/);
+});
+
+test("preserves workspaces across navigation and lets sharpening reuse OCR images", async () => {
+  const [studio, styles] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /hidden=\{view !== "review"\}/);
+  assert.match(studio, /hidden=\{view !== "enhance"\}/);
+  assert.match(studio, /ocrImageOptions/);
+  assert.match(studio, /Lấy ảnh từ OCR/);
+  assert.match(studio, /chooseOcrImage/);
+  assert.match(styles, /\.workspace-view\[hidden\]/);
+  assert.match(styles, /\.ocr-image-picker/);
+});
+
+test("normalizes OCR formulas for MathType ToggleTeX", async () => {
+  const [latex, processRoute, reviewRoute, studio] = await Promise.all([
+    readFile(new URL("../lib/latex.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/review/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(latex, /normalizeToggleTex/);
+  assert.match(latex, /return value \? `\$\$\{value\}\$` : ""/);
+  assert.match(processRoute, /normalizeToggleTex\(question\.latex\)/);
+  assert.match(processRoute, /ToggleTeX của MathType/);
+  assert.match(reviewRoute, /normalizeToggleTex\(question\.latex\)/);
+  assert.match(studio, /LaTeX ToggleTeX · dùng cặp dấu \$\.\.\.\$/);
 });
 
 test("supports selectable Gemini models for document recognition", async () => {

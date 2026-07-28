@@ -87,6 +87,10 @@ const schemaStatements = [
     status TEXT NOT NULL DEFAULT 'AWAITING_REVIEW',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS app_migrations (
+    id TEXT PRIMARY KEY,
+    applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   "CREATE INDEX IF NOT EXISTS questions_topic_idx ON questions(topic)",
   "CREATE INDEX IF NOT EXISTS questions_difficulty_idx ON questions(difficulty)",
   "CREATE INDEX IF NOT EXISTS image_regions_document_idx ON image_regions(document_id, status)",
@@ -124,6 +128,23 @@ async function initialize() {
         "ALTER TABLE image_regions ADD COLUMN page_number INTEGER NOT NULL DEFAULT 1",
       )
       .run();
+  }
+
+  const clearLibraryMigrationId = "2026-07-29-clear-library-v16";
+  const libraryAlreadyCleared = await db
+    .prepare("SELECT id FROM app_migrations WHERE id = ?")
+    .bind(clearLibraryMigrationId)
+    .first<{ id: string }>();
+  if (!libraryAlreadyCleared) {
+    await db.batch([
+      db.prepare("DELETE FROM exams"),
+      db.prepare("DELETE FROM image_regions"),
+      db.prepare("UPDATE illustrations SET question_id = NULL"),
+      db.prepare("DELETE FROM questions"),
+      db
+        .prepare("INSERT INTO app_migrations (id) VALUES (?)")
+        .bind(clearLibraryMigrationId),
+    ]);
   }
 }
 

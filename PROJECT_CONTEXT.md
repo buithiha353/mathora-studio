@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 15
-- Current code version: 15
+- Current code version: 16 (not yet deployed)
 - Sites deployed source: `2f5520a411276489095c9e325843e404a67941e8`
 - Sites saved version: 12
 
@@ -72,7 +72,8 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 2. Process every numbered page image sequentially, build a pixel-coordinate
    Layout Map first, normalize its reading order and
    review flags, then recognize THCS question content, LaTeX, knowledge topics,
-   grades, and difficulty in a separate second Gemini pass.
+   grades, and difficulty in a separate second Gemini pass. OCR formula fields
+   are normalized to one `$...$` pair for MathType ToggleTeX.
 3. Validate keys with a minimal real `generateContent` request, expose sanitized Google errors, rotate healthy keys by priority and usage, and preserve temporarily rate-limited keys for later rotation.
 4. Persist extracted questions and image regions as awaiting review.
 5. Let users move and resize detected regions directly with eight handles,
@@ -90,11 +91,15 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
 8. Export generated exams as A4 DOCX files with Times New Roman body text,
    Cambria Math formula lines, and inline cropped source images attached to
    their questions.
-9. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
+9. Sharpen an uploaded image or select any source page from the active OCR
+   session, compare before/after locally, then download it or explicitly send
+   it to OCR.
 10. Generate structured 2D real-world math illustrations with verified data labels.
 11. Provide a safe demo result when no active Gemini key exists.
 12. Keep the persistent question library free of built-in sample records; only
     reviewed OCR questions are stored as library data.
+13. Keep every workspace mounted while navigating so uploads, review choices,
+    forms, generated previews, and in-flight work survive feature-tab changes.
 
 ## Data model
 
@@ -137,7 +142,9 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- thirteen application tests, including the removal of seeded library data,
+- sixteen application tests, including one-time full library cleanup,
+  workspace-state preservation, OCR-image reuse in sharpening, ToggleTeX
+  normalization, the removal of seeded library data,
   the human-review gate, selectable Gemini
   model whitelist, layout-before-OCR enforcement, PDF page splitting, editable
   regions, real crop previews, grade filtering, question details, exam
@@ -208,3 +215,7 @@ Vietnam-hosted backend.
   both production databases, leaving 53 OCR-derived questions on cPanel and 4
   on Sites; added non-cached overview responses and verified zero remaining
   `q-demo-*` records on both targets.
+- 2026-07-29 — v16 (not deployed): Added a one-time complete backend library
+  cleanup, OCR-source selection for image sharpening, mounted workspace state
+  preservation across feature tabs, and automatic `$...$` ToggleTeX
+  normalization for OCR/review formula fields.

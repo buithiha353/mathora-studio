@@ -1,4 +1,5 @@
 import { demoOcrResult } from "@/lib/demo-data";
+import { normalizeToggleTex } from "@/lib/latex";
 import { buildDocumentLayoutPrompt } from "@/lib/layout-prompt";
 import { requireFiles } from "@/lib/server/bindings";
 import { ensureDatabase } from "@/lib/server/database";
@@ -429,6 +430,8 @@ export async function POST(request: Request) {
           schema: contentOcrSchema,
           prompt: `Bạn là hệ thống OCR đề thi Toán THCS tiếng Việt dành cho các lớp 6, 7, 8 và 9.
 Đây là bước OCR nội dung chạy SAU bước Document Layout AI trên trang ${sourcePage.pageNumber}/${sourcePages.length}. Đọc theo đúng thứ tự và ranh giới vùng trong Layout Map dưới đây. Bảo toàn mọi công thức dưới dạng LaTeX.
+Trong trường content, bọc từng biểu thức toán học bằng đúng một cặp dấu $...$.
+Trường latex chỉ chứa công thức chính của câu hỏi, cũng bọc bằng đúng một cặp dấu $...$ để tương thích ToggleTeX của MathType. Không dùng $$...$$. Nếu câu hỏi không có công thức thì trả về chuỗi rỗng.
 Không thay đổi bbox của Layout Map và không gộp các vùng khác loại.
 Tách chính xác từng câu hỏi, xác định khối lớp từ 6 đến 9, phân loại theo mảng kiến thức Toán THCS và độ khó theo bốn mức BIET, HIEU, VAN_DUNG, VAN_DUNG_CAO.
 Không tự sửa hoặc bổ sung dữ kiện không nhìn thấy. Tên tài liệu là "${document.name}".
@@ -474,6 +477,7 @@ ${JSON.stringify(normalizedLayout)}`,
       (question, index) => ({
         ...question,
         id: `${documentId}-q-${index + 1}`,
+        latex: normalizeToggleTex(question.latex),
         grade: Math.min(9, Math.max(6, Number(question.grade) || 9)),
         confidence: normalizeConfidence(question.confidence),
         assetCount: Math.max(0, Number(question.assetCount) || 0),

@@ -46,7 +46,8 @@ trong quy trình OCR.
   `gemini-3.1-flash-lite`.
 - Đọc nội dung theo đúng thứ tự thị giác đã xác định.
 - Nhận diện văn bản tiếng Việt và ký hiệu Toán THCS.
-- Chuyển công thức sang LaTeX nhưng vẫn giữ nội dung gốc để đối chiếu.
+- Chuyển công thức sang LaTeX, tự động bọc bằng đúng một cặp `$...$` để dùng
+  với ToggleTeX của MathType, nhưng vẫn giữ nội dung gốc để đối chiếu.
 - Phát hiện hình học, đồ thị, bảng, biểu đồ và hình minh họa.
 - Trả về tọa độ vùng ảnh theo từng trang và liên kết vùng ảnh với câu hỏi.
 - Không tự sửa, suy diễn hoặc bổ sung dữ kiện không có trong đề.
@@ -133,6 +134,7 @@ Phân hệ này **không nằm trong combo OCR**.
 ### Chức năng
 
 - Nhận một ảnh do người dùng chọn.
+- Cho phép chọn một ảnh hoặc một trang ảnh đang có trong phiên OCR hiện tại.
 - Cung cấp các mức làm nét và khử nhiễu.
 - Hiển thị so sánh trước/sau.
 - Cho phép tải ảnh kết quả về máy.
@@ -187,6 +189,8 @@ Phân hệ này **không nằm trong combo OCR**.
 - PDF.js chạy phía trình duyệt để tách PDF thành ảnh PNG từng trang trước OCR.
 - Các workspace tách biệt cho OCR, thư viện, tạo đề, làm nét ảnh, vẽ minh họa
   và quản lý key.
+- Các workspace được giữ mounted để bảo toàn dữ liệu nhập, lựa chọn và tiến
+  trình đang chạy khi người dùng chuyển sang tính năng khác.
 
 ### Backend
 

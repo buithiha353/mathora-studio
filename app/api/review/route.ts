@@ -1,4 +1,5 @@
 import { ensureDatabase } from "@/lib/server/database";
+import { normalizeToggleTex } from "@/lib/latex";
 
 const difficulties = new Set([
   "BIET",
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
           .bind(
             question.code.trim(),
             question.content.trim(),
-            question.latex?.trim() ?? "",
+            normalizeToggleTex(question.latex),
             Math.min(9, Math.max(6, Number(question.grade) || 9)),
             question.topic.trim(),
             question.difficulty,

@@ -75,6 +75,14 @@ textarea:focus-visible {
   background: var(--canvas);
 }
 
+.workspace-view {
+  display: contents;
+}
+
+.workspace-view[hidden] {
+  display: none !important;
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -2304,6 +2312,73 @@ textarea:focus-visible {
   margin-top: 5px;
   color: var(--muted);
   font-size: 9px;
+}
+
+.ocr-image-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: -5px 0 16px;
+}
+
+.ocr-image-source .button {
+  flex: 0 0 auto;
+}
+
+.ocr-image-source small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.ocr-image-picker {
+  display: grid;
+  max-height: 238px;
+  margin: -7px 0 17px;
+  padding: 7px;
+  overflow: hidden auto;
+  background: #f7faf8;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  gap: 6px;
+}
+
+.ocr-image-picker button {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 58px;
+  padding: 5px 8px 5px 5px;
+  color: var(--ink-soft);
+  text-align: left;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  gap: 9px;
+}
+
+.ocr-image-picker button:hover {
+  color: var(--forest);
+  border-color: #8eaaa1;
+}
+
+.ocr-image-picker img {
+  width: 54px;
+  height: 46px;
+  object-fit: cover;
+  background: white;
+  border-radius: 5px;
+}
+
+.ocr-image-picker span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .enhance-levels {
