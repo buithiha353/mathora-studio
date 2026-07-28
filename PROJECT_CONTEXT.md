@@ -10,10 +10,10 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 12
-- Current code version: 13 (not yet deployed)
-- Sites deployed source: `ab46892bc1249cd6fbd9293e1140c0b1a1521b69`
-- Sites saved version: 8
+- Current deployed version: 13
+- Current code version: 13
+- Sites deployed source: `8352bff4511000f899f0efc2b5fcf14714960f6a`
+- Sites saved version: 9
 
 ## Product rules
 
@@ -173,3 +173,7 @@ Vietnam-hosted backend.
   selected source region, aligned overlays to natural image dimensions, passed
   exact pixel dimensions to stricter Gemini layout mapping, added question
   details and grade filtering, and added randomized exam regeneration.
+- 2026-07-28 — v13 deployment: Deployed the OCR alignment, real crop preview,
+  question-library details/grade filters, and exam regeneration release to both
+  production targets; preserved cPanel data/uploads and verified the primary
+  page, overview API, production bundle, and all five requested UI behaviors.
