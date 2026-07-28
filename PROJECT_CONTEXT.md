@@ -10,10 +10,10 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 15
-- Current code version: 16 (not yet deployed)
-- Sites deployed source: `2f5520a411276489095c9e325843e404a67941e8`
-- Sites saved version: 12
+- Current deployed version: 16
+- Current code version: 16
+- Sites deployed source: `6430cfa36b7522e0ab0ad6a736b377c4b2456d54`
+- Sites saved version: 13
 
 ## Product rules
 
@@ -126,7 +126,9 @@ Document status flow: `UPLOADED` → `REGION_REVIEW` → `COMPLETED`.
 - Exam generation produces an in-app preview, stored snapshot, and DOCX export;
   final PDF export is not complete.
 - Formula review uses editable LaTeX text; dedicated typeset rendering is not yet integrated.
-- A review session is primarily held in the active client workflow; full recovery and document-history reopening need expansion.
+- Workspace state survives feature-tab navigation in the active browser
+  session; recovery after page reload and document-history reopening still need
+  expansion.
 - Illustration output is a structured renderer rather than a downloadable production SVG/PDF workflow.
 
 ## Validation
@@ -219,3 +221,8 @@ Vietnam-hosted backend.
   cleanup, OCR-source selection for image sharpening, mounted workspace state
   preservation across feature tabs, and automatic `$...$` ToggleTeX
   normalization for OCR/review formula fields.
+- 2026-07-29 — v16 deployment: Cleared all questions, question-linked image
+  regions, and generated exams from both production backends while preserving
+  documents, uploads, and API keys; verified zero questions/exams and deployed
+  OCR-image sharpening selection, persistent feature workspaces, and ToggleTeX
+  normalization to both targets.
