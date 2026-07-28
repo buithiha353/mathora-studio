@@ -110,7 +110,9 @@ test("splits PDF files into PNG pages before Gemini processing", async () => {
   assert.match(processRoute, /loadSourcePages/);
   assert.match(processRoute, /for \(const sourcePage of sourcePages\)/);
   assert.match(processRoute, /mimeType: "image\/png"/);
-  assert.match(processRoute, /buildDocumentLayoutPrompt\(sourcePage\.pageNumber\)/);
+  assert.match(processRoute, /sourcePage\.width/);
+  assert.match(processRoute, /sourcePage\.height/);
+  assert.match(pageRoute, /JSON\.stringify\(\{ width, height \}\)/);
 });
 
 test("supports moving and resizing detected image regions", async () => {
@@ -129,6 +131,38 @@ test("supports moving and resizing detected image regions", async () => {
   assert.match(reviewRoute, /page_number = \?/);
   assert.match(styles, /touch-action: none/);
   assert.match(styles, /\.handle-se/);
+});
+
+test("shows real OCR crops and keeps overlays aligned to source images", async () => {
+  const [studio, styles, layoutPrompt, processRoute] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../lib/layout-prompt.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/process/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /RegionCropPreview/);
+  assert.match(studio, /region-crop-source/);
+  assert.doesNotMatch(studio, /mini-circle/);
+  assert.match(styles, /\.paper\.has-image-source/);
+  assert.match(styles, /height: auto/);
+  assert.match(layoutPrompt, /Kích thước CHÍNH XÁC/);
+  assert.match(layoutPrompt, /Khoanh bbox sát biên nội dung/);
+  assert.match(processRoute, /expectedSize/);
+});
+
+test("supports question details, grade filtering, and exam regeneration", async () => {
+  const [studio, examRoute] = await Promise.all([
+    readFile(new URL("../app/MathOcrStudio.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/exams/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(studio, /Chi tiết câu hỏi/);
+  assert.match(studio, /Lọc câu hỏi theo lớp/);
+  assert.match(studio, /Tất cả lớp/);
+  assert.doesNotMatch(studio, />\s*Bộ lọc\s*</);
+  assert.match(studio, /"Tạo lại"/);
+  assert.match(examRoute, /ORDER BY RANDOM\(\)/);
 });
 
 test("applies the THCS textbook illustration prompt", async () => {

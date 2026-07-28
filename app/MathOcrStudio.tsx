@@ -40,6 +40,7 @@ import {
   UploadCloud,
   WandSparkles,
   Waves,
+  X,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -216,9 +217,27 @@ function formatFileSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+async function readImageDimensions(file: File) {
+  if (!file.type.startsWith("image/")) return null;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return dimensions;
+  } catch {
+    return null;
+  }
+}
+
 async function renderPdfPages(
   file: File,
-  onPage: (page: File, pageNumber: number, totalPages: number) => Promise<void>,
+  onPage: (
+    page: File,
+    pageNumber: number,
+    totalPages: number,
+    width: number,
+    height: number,
+  ) => Promise<void>,
 ) {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
@@ -258,7 +277,13 @@ async function renderPdfPages(
         `page-${String(pageNumber).padStart(4, "0")}.png`,
         { type: "image/png" },
       );
-      await onPage(pageFile, pageNumber, document.numPages);
+      await onPage(
+        pageFile,
+        pageNumber,
+        document.numPages,
+        canvas.width,
+        canvas.height,
+      );
       previews.push(URL.createObjectURL(blob));
       page.cleanup();
     }
@@ -269,6 +294,47 @@ async function renderPdfPages(
   } finally {
     await document.cleanup();
   }
+}
+
+function RegionCropPreview({
+  region,
+  source,
+}: {
+  region: Region;
+  source: string | null;
+}) {
+  if (!source) {
+    return (
+      <div className="region-preview is-empty">
+        <ImageIcon size={22} />
+        <span>Chưa có ảnh nguồn để xem vùng crop</span>
+      </div>
+    );
+  }
+
+  const [top, left, bottom, right] = region.box;
+  const width = Math.max(2, right - left);
+  const height = Math.max(2, bottom - top);
+
+  return (
+    <div className="region-preview">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        className="region-crop-source"
+        src={source}
+        alt={`Vùng ${region.label} đang chọn`}
+        style={{
+          width: `${10000 / width}%`,
+          height: `${10000 / height}%`,
+          left: `${(-left / width) * 100}%`,
+          top: `${(-top / height) * 100}%`,
+        }}
+      />
+      <span className="crop-label">
+        Trang {region.page ?? 1} · vùng đang chọn
+      </span>
+    </div>
+  );
 }
 
 function DocumentPaper({
@@ -303,6 +369,8 @@ function DocumentPaper({
     box: number[];
   } | null>(null);
   const pagePreview = pagePreviews[currentPage - 1] ?? null;
+  const sourceImage =
+    pagePreview ?? (previewType?.startsWith("image/") ? preview : null);
 
   function beginGesture(
     event: ReactPointerEvent<HTMLElement>,
@@ -372,7 +440,7 @@ function DocumentPaper({
 
   return (
     <div className="paper-shell" aria-label="Bản xem trước tài liệu">
-      <div className="paper">
+      <div className={`paper ${sourceImage ? "has-image-source" : ""}`}>
         {pagePreview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -674,6 +742,10 @@ function ReviewWorkspace({
   const region =
     result.imageRegions.find((item) => item.id === selectedRegion) ??
     result.imageRegions[0];
+  const regionSource = region
+    ? pagePreviews[(region.page ?? 1) - 1] ??
+      (selectedFile?.type.startsWith("image/") ? selectedPreview : null)
+    : null;
   const question =
     result.questions[
       Math.min(selectedQuestionIndex, Math.max(0, result.questions.length - 1))
@@ -957,18 +1029,7 @@ function ReviewWorkspace({
                       ))}
                     </div>
 
-                    <div className="region-preview">
-                      <div className="mini-circle">
-                        <i className="mini-circle-shape" />
-                        <i className="mini-tangent mini-tangent-one" />
-                        <i className="mini-tangent mini-tangent-two" />
-                        <b>A</b>
-                        <span>O</span>
-                        <em>B</em>
-                        <small>C</small>
-                      </div>
-                      <span className="crop-label">Ảnh crop gốc · PNG</span>
-                    </div>
+                    <RegionCropPreview region={region} source={regionSource} />
 
                     <div className="confidence-row">
                       <div>
@@ -1316,15 +1377,29 @@ function LibraryView({
 }) {
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("ALL");
+  const [grade, setGrade] = useState("ALL");
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
+    null,
+  );
   const filtered = questions.filter((question) => {
     const matchesQuery = `${question.content} ${question.topic}`
       .toLowerCase()
       .includes(query.toLowerCase());
     return (
       matchesQuery &&
-      (difficulty === "ALL" || question.difficulty === difficulty)
+      (difficulty === "ALL" || question.difficulty === difficulty) &&
+      (grade === "ALL" || Number(grade) === (question.grade ?? 9))
     );
   });
+
+  useEffect(() => {
+    if (!selectedQuestion) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedQuestion(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedQuestion]);
 
   return (
     <main className="workspace">
@@ -1390,10 +1465,20 @@ function LibraryView({
               <option value="VAN_DUNG_CAO">Vận dụng cao</option>
             </select>
           </label>
-          <button type="button" className="button button-quiet">
-            <SlidersHorizontal size={16} />
-            Bộ lọc
-          </button>
+          <label className="filter-select grade-filter">
+            <Layers3 size={16} />
+            <select
+              value={grade}
+              onChange={(event) => setGrade(event.target.value)}
+              aria-label="Lọc câu hỏi theo lớp"
+            >
+              <option value="ALL">Tất cả lớp</option>
+              <option value="6">Lớp 6</option>
+              <option value="7">Lớp 7</option>
+              <option value="8">Lớp 8</option>
+              <option value="9">Lớp 9</option>
+            </select>
+          </label>
         </div>
 
         <div className="question-table">
@@ -1404,7 +1489,19 @@ function LibraryView({
             <span />
           </div>
           {filtered.map((question) => (
-            <article className="question-row" key={question.id ?? question.code}>
+            <article
+              className="question-row"
+              key={question.id ?? question.code}
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedQuestion(question)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedQuestion(question);
+                }
+              }}
+            >
               <div className="question-main">
                 <span className="question-code">{question.code}</span>
                 <div>
@@ -1425,13 +1522,81 @@ function LibraryView({
                 </span>
                 <small>{question.status === "AWAITING_REVIEW" ? "Chờ duyệt" : "Đã duyệt"}</small>
               </div>
-              <IconButton label={`Mở ${question.code}`}>
+              <IconButton
+                label={`Xem chi tiết ${question.code}`}
+                onClick={() => setSelectedQuestion(question)}
+              >
                 <ChevronRight size={17} />
               </IconButton>
             </article>
           ))}
         </div>
       </section>
+
+      {selectedQuestion ? (
+        <div
+          className="question-detail-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedQuestion(null);
+          }}
+        >
+          <section
+            className="question-detail-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="question-detail-title"
+          >
+            <header>
+              <div>
+                <span>Chi tiết câu hỏi</span>
+                <h2 id="question-detail-title">{selectedQuestion.code}</h2>
+              </div>
+              <IconButton
+                label="Đóng chi tiết câu hỏi"
+                onClick={() => setSelectedQuestion(null)}
+              >
+                <X size={18} />
+              </IconButton>
+            </header>
+            <div className="question-detail-body">
+              <div className="question-detail-meta">
+                <span>Lớp {selectedQuestion.grade ?? 9}</span>
+                <DifficultyBadge value={selectedQuestion.difficulty} />
+                <span>{selectedQuestion.topic}</span>
+              </div>
+              <div className="question-detail-content">
+                <small>Nội dung</small>
+                <p>{selectedQuestion.content}</p>
+              </div>
+              {selectedQuestion.latex ? (
+                <div className="question-detail-content">
+                  <small>Công thức LaTeX</small>
+                  <code>{selectedQuestion.latex}</code>
+                </div>
+              ) : null}
+              {selectedQuestion.answer ? (
+                <div className="question-detail-content">
+                  <small>Đáp án</small>
+                  <p>{selectedQuestion.answer}</p>
+                </div>
+              ) : null}
+              <div className="question-detail-footer">
+                <span>
+                  {selectedQuestion.assetCount
+                    ? `${selectedQuestion.assetCount} hình ảnh`
+                    : "Không có hình ảnh"}
+                </span>
+                <span>
+                  {selectedQuestion.status === "AWAITING_REVIEW"
+                    ? "Chờ duyệt"
+                    : "Đã duyệt"}
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
@@ -1625,8 +1790,18 @@ function ExamView({
             onClick={generate}
             disabled={loading}
           >
-            {loading ? <span className="spinner" /> : <Sparkles size={18} />}
-            {loading ? "Đang giải ma trận..." : "Tạo đề theo ma trận"}
+            {loading ? (
+              <span className="spinner" />
+            ) : generated.length ? (
+              <RefreshCcw size={18} />
+            ) : (
+              <Sparkles size={18} />
+            )}
+            {loading
+              ? "Đang giải ma trận..."
+              : generated.length
+                ? "Tạo lại"
+                : "Tạo đề theo ma trận"}
             <ArrowRight size={17} />
           </button>
         </div>
@@ -2511,9 +2686,14 @@ export function MathOcrStudio() {
     setIsUploading(true);
 
     try {
+      const sourceDimensions = await readImageDimensions(file);
       const form = new FormData();
       form.append("file", file);
       form.append("sharpenProfile", "NONE");
+      if (sourceDimensions) {
+        form.append("sourceWidth", String(sourceDimensions.width));
+        form.append("sourceHeight", String(sourceDimensions.height));
+      }
       const response = await fetch(`${API_BASE_PATH}/api/upload`, {
         method: "POST",
         body: form,
@@ -2530,12 +2710,14 @@ export function MathOcrStudio() {
       if (file.type === "application/pdf") {
         const previews = await renderPdfPages(
           file,
-          async (page, pageNumber, pageCount) => {
+          async (page, pageNumber, pageCount, width, height) => {
             setNotice(`Đang tách PDF: trang ${pageNumber}/${pageCount}…`);
             const pageForm = new FormData();
             pageForm.append("documentId", uploadedDocumentId);
             pageForm.append("pageNumber", String(pageNumber));
             pageForm.append("totalPages", String(pageCount));
+            pageForm.append("width", String(width));
+            pageForm.append("height", String(height));
             pageForm.append("page", page);
             const pageResponse = await fetch(`${API_BASE_PATH}/api/upload/page`, {
               method: "POST",

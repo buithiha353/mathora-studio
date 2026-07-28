@@ -608,6 +608,19 @@ textarea:focus-visible {
   transition: filter 180ms ease;
 }
 
+.paper.has-image-source {
+  height: fit-content;
+  aspect-ratio: auto;
+}
+
+.paper.has-image-source .uploaded-preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: fill;
+}
+
 .sample-page {
   position: absolute;
   inset: 0;
@@ -1085,6 +1098,25 @@ textarea:focus-visible {
   border-radius: 9px;
 }
 
+.region-preview.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+  background-image: none;
+}
+
+.region-crop-source {
+  position: absolute;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
 .crop-label {
   position: absolute;
   right: 7px;
@@ -1095,75 +1127,6 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid var(--line);
   border-radius: 4px;
-}
-
-.mini-circle {
-  position: absolute;
-  top: 17px;
-  left: 50%;
-  width: 132px;
-  height: 88px;
-  transform: translateX(-50%);
-}
-
-.mini-circle-shape {
-  position: absolute;
-  top: 3px;
-  right: 5px;
-  width: 78px;
-  height: 78px;
-  border: 1px solid var(--ink);
-  border-radius: 50%;
-}
-
-.mini-circle b,
-.mini-circle span,
-.mini-circle em,
-.mini-circle small {
-  position: absolute;
-  z-index: 2;
-  font-family: Cambria, serif;
-  font-size: 10px;
-  font-style: italic;
-  font-weight: 500;
-}
-
-.mini-circle b {
-  top: 38px;
-  left: 0;
-}
-
-.mini-circle span {
-  top: 39px;
-  right: 41px;
-}
-
-.mini-circle em {
-  top: 0;
-  right: 35px;
-}
-
-.mini-circle small {
-  right: 34px;
-  bottom: -2px;
-}
-
-.mini-tangent {
-  position: absolute;
-  top: 44px;
-  left: 8px;
-  width: 94px;
-  height: 1px;
-  background: var(--ink);
-  transform-origin: left;
-}
-
-.mini-tangent-one {
-  transform: rotate(-27deg);
-}
-
-.mini-tangent-two {
-  transform: rotate(27deg);
 }
 
 .confidence-row {
@@ -1637,6 +1600,15 @@ textarea:focus-visible {
   background: #fbfdfc;
 }
 
+.question-row[role="button"] {
+  cursor: pointer;
+}
+
+.question-row[role="button"]:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -2px;
+}
+
 .question-main {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -1744,6 +1716,108 @@ textarea:focus-visible {
 .source-cell small {
   color: var(--muted);
   font-size: 8px;
+}
+
+.question-detail-backdrop {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  padding: 28px;
+  background: rgba(18, 38, 34, 0.4);
+  backdrop-filter: blur(5px);
+  place-items: center;
+}
+
+.question-detail-panel {
+  width: min(680px, 94vw);
+  max-height: min(720px, 88vh);
+  overflow: hidden auto;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: 15px;
+  box-shadow: 0 25px 70px rgba(21, 52, 45, 0.24);
+}
+
+.question-detail-panel > header {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 19px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--line);
+}
+
+.question-detail-panel > header span,
+.question-detail-content small {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.question-detail-panel h2 {
+  margin: 3px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+}
+
+.question-detail-body {
+  display: grid;
+  gap: 14px;
+  padding: 19px;
+}
+
+.question-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.question-detail-meta > span {
+  padding: 5px 8px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  background: var(--canvas);
+  border-radius: 10px;
+}
+
+.question-detail-content {
+  padding: 15px;
+  background: #fbfcfb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.question-detail-content p {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-family: Cambria, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.question-detail-content code {
+  display: block;
+  margin-top: 9px;
+  padding: 10px;
+  overflow-x: auto;
+  color: var(--forest);
+  font-family: "Cambria Math", Cambria, serif;
+  background: var(--mint);
+  border-radius: 7px;
+}
+
+.question-detail-footer {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 9px;
 }
 
 .exam-layout {

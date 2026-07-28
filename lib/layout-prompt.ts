@@ -323,10 +323,26 @@ Không sinh văn bản.
 
 Chỉ trả về JSON hợp lệ.`;
 
-export function buildDocumentLayoutPrompt(page = 1) {
+export function buildDocumentLayoutPrompt(
+  page = 1,
+  imageWidth?: number,
+  imageHeight?: number,
+) {
+  const exactSize =
+    imageWidth && imageHeight
+      ? `Kích thước CHÍNH XÁC của ảnh đầu vào là width=${imageWidth}px, height=${imageHeight}px.
+Phải trả đúng hai giá trị này trong JSON; không được ước lượng hoặc thay đổi kích thước.`
+      : "Đọc chính xác width và height của ảnh PNG đầu vào.";
+
   return `${DOCUMENT_LAYOUT_SYSTEM_PROMPT}
 
 Trang hiện tại: ${page}.
+${exactSize}
+Khoanh bbox sát biên nội dung nhìn thấy của từng vùng, chỉ chừa tối đa 4 pixel đệm.
+Không lấy khoảng trắng lớn xung quanh, không lấy phần chữ của câu hỏi vào vùng hình,
+không để bbox của hình tràn sang câu kế tiếp và không dùng một bbox chung cho nhiều hình.
+Kiểm tra lại lần cuối rằng left < right, top < bottom và bốn cạnh khớp đúng vị trí
+trên ảnh gốc theo hệ tọa độ có gốc (0,0) ở góc trên bên trái.
 Luôn trả need_review=false khi confidence >= 0.95 và need_review=true khi confidence < 0.95.
 Đảm bảo bbox nằm trong width và height của ảnh, đồng thời id không trùng nhau.`;
 }

@@ -160,9 +160,18 @@ type LayoutMap = {
   regions: LayoutRegion[];
 };
 
-function normalizeLayoutMap(input: LayoutMap): LayoutMap {
-  const width = Math.max(1, Math.round(Number(input.width) || 1));
-  const height = Math.max(1, Math.round(Number(input.height) || 1));
+function normalizeLayoutMap(
+  input: LayoutMap,
+  expectedSize?: { width: number; height: number },
+): LayoutMap {
+  const width = Math.max(
+    1,
+    Math.round(Number(expectedSize?.width ?? input.width) || 1),
+  );
+  const height = Math.max(
+    1,
+    Math.round(Number(expectedSize?.height ?? input.height) || 1),
+  );
   const seenIds = new Set<string>();
   const regions = (Array.isArray(input.regions) ? input.regions : [])
     .map((region, index) => {
@@ -283,7 +292,24 @@ type SourcePage = {
   pageNumber: number;
   mimeType: string;
   base64: string;
+  width?: number;
+  height?: number;
 };
+
+async function loadDimensions(key: string) {
+  try {
+    const object = await requireFiles().get(key);
+    if (!object) return undefined;
+    const data = JSON.parse(
+      new TextDecoder().decode(await object.arrayBuffer()),
+    ) as { width?: number; height?: number };
+    const width = Math.round(Number(data.width) || 0);
+    const height = Math.round(Number(data.height) || 0);
+    return width > 0 && height > 0 ? { width, height } : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 async function loadSourcePages(document: {
   id: string;
@@ -311,6 +337,7 @@ async function loadSourcePages(document: {
         pageNumber,
         mimeType: "image/png",
         base64: bytesToBase64(pageBytes),
+        ...(await loadDimensions(`${pageKey}.json`)),
       });
     }
     return pages;
@@ -324,11 +351,15 @@ async function loadSourcePages(document: {
     throw new Error("Không tìm thấy tệp nguồn.");
   }
   const bytes = new Uint8Array(await object.arrayBuffer());
+  const sourceDimensions = await loadDimensions(
+    `documents/${document.id}/source-dimensions.json`,
+  );
   return [
     {
       pageNumber: 1,
       mimeType: document.mimeType,
       base64: bytesToBase64(bytes),
+      ...sourceDimensions,
     },
   ];
 }
@@ -374,10 +405,19 @@ export async function POST(request: Request) {
           mimeType: sourcePage.mimeType,
           data: sourcePage.base64,
           schema: layoutSchema,
-          prompt: buildDocumentLayoutPrompt(sourcePage.pageNumber),
+          prompt: buildDocumentLayoutPrompt(
+            sourcePage.pageNumber,
+            sourcePage.width,
+            sourcePage.height,
+          ),
         });
         const normalizedLayout = {
-          ...normalizeLayoutMap(layoutResponse.data as LayoutMap),
+          ...normalizeLayoutMap(
+            layoutResponse.data as LayoutMap,
+            sourcePage.width && sourcePage.height
+              ? { width: sourcePage.width, height: sourcePage.height }
+              : undefined,
+          ),
           page: sourcePage.pageNumber,
         };
         layoutMaps.push(normalizedLayout);

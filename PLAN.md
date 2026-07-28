@@ -36,6 +36,8 @@ trong quy trình OCR.
 - Bước 1 chỉ phân tích bố cục bằng Document Layout AI, không OCR nội dung.
 - Layout Map phải liệt kê toàn bộ vùng theo đúng thứ tự đọc, dùng tọa độ pixel
   của ảnh trang gốc và đánh dấu `need_review` khi độ tin cậy dưới 0,95.
+- Truyền kích thước pixel thật của từng ảnh trang cho AI, yêu cầu bbox bám sát
+  nội dung và dùng chính kích thước này để chuẩn hóa tọa độ hiển thị.
 - Không gộp vùng khác loại; đặc biệt tách riêng số câu, văn bản, công thức,
   ảnh thực tế, bảng, đồ thị, hình học và sơ đồ.
 - Bước 2 mới OCR nội dung dựa trên ranh giới và thứ tự của Layout Map.
@@ -52,6 +54,8 @@ trong quy trình OCR.
 ### 3.3. Kiểm tra vùng ảnh bắt buộc
 
 - Hiển thị vùng AI đã khoanh trên bản xem trước.
+- Preview bên cạnh phải crop trực tiếp từ ảnh trang nguồn theo vùng đang chọn,
+  không dùng hình minh họa tĩnh.
 - Cho phép kéo trực tiếp để di chuyển vùng, dùng tám tay nắm để thay đổi kích
   thước và nhập tọa độ phần trăm để chỉnh chính xác.
 - Tự chuyển bản xem trước đến đúng trang của vùng đang chọn.
@@ -89,7 +93,8 @@ trong quy trình OCR.
 
 - Lưu mỗi câu hỏi thành một bản ghi độc lập.
 - Giữ liên kết với tài liệu nguồn và các vùng ảnh đã xác nhận.
-- Hỗ trợ tìm kiếm, lọc, chỉnh sửa, gắn thẻ và phát hiện câu trùng lặp.
+- Hỗ trợ xem chi tiết từng câu, tìm kiếm, lọc theo lớp và độ khó, chỉnh sửa,
+  gắn thẻ và phát hiện câu trùng lặp.
 - Có lịch sử thay đổi và khả năng mở lại phiên duyệt.
 
 ## 4. Thư viện câu hỏi và tạo đề
@@ -107,6 +112,8 @@ Người dùng lựa chọn:
 
 Hệ thống chỉ lấy câu đã duyệt, tránh trùng lặp và cảnh báo nếu thư viện không đủ
 câu theo ma trận.
+Sau khi tạo đề, người dùng có thể chọn **Tạo lại** để xáo và chọn một tổ hợp câu
+khác theo cùng cấu hình.
 
 ### 4.2. Tổng hợp đề
 

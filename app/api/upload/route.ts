@@ -13,6 +13,8 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     const sharpenProfile = String(form.get("sharpenProfile") ?? "NONE");
+    const sourceWidth = Number(form.get("sourceWidth"));
+    const sourceHeight = Number(form.get("sourceHeight"));
 
     if (!(file instanceof File)) {
       return Response.json({ error: "Vui lòng chọn một tệp." }, { status: 400 });
@@ -38,6 +40,21 @@ export async function POST(request: Request) {
       httpMetadata: { contentType: file.type },
       customMetadata: { originalName: file.name },
     });
+    if (
+      file.type.startsWith("image/") &&
+      Number.isInteger(sourceWidth) &&
+      Number.isInteger(sourceHeight) &&
+      sourceWidth > 0 &&
+      sourceHeight > 0
+    ) {
+      await files.put(
+        `documents/${id}/source-dimensions.json`,
+        await new Blob([
+          JSON.stringify({ width: sourceWidth, height: sourceHeight }),
+        ]).arrayBuffer(),
+        { httpMetadata: { contentType: "application/json" } },
+      );
+    }
 
     const db = await ensureDatabase();
     await db

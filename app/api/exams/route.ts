@@ -23,7 +23,7 @@ export async function POST(request: Request) {
                 asset_count AS assetCount
          FROM questions
          WHERE grade = ? AND status = 'REVIEWED'
-         ORDER BY created_at DESC`,
+         ORDER BY RANDOM()`,
       )
       .bind(grade)
       .all<Record<string, unknown>>();

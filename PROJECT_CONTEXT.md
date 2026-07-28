@@ -11,7 +11,7 @@ Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
 - Current deployed version: 12
-- Current code version: 12
+- Current code version: 13 (not yet deployed)
 - Sites deployed source: `ab46892bc1249cd6fbd9293e1140c0b1a1521b69`
 - Sites saved version: 8
 
@@ -79,8 +79,12 @@ GitHub: https://github.com/buithiha353/mathora-studio (private)
    edit exact coordinates, switch to the region's source page, review region
    labels/types/question links, and edit question content, LaTeX, grade, topic,
    difficulty, and answer.
+   Region overlays use the source image's natural aspect ratio, and the side
+   preview crops the currently selected region from its real source page.
 6. Admit only confirmed questions to the library and only reviewed questions to exam generation.
-7. Generate an exam preview from a requested grade and difficulty matrix.
+7. Browse reviewed questions with grade/difficulty filters and a full
+   per-question detail view; generate or regenerate a randomized exam preview
+   from a requested grade and difficulty matrix.
 8. Sharpen an image locally as a separate before/after tool, then download it or explicitly send it to OCR.
 9. Generate structured 2D real-world math illustrations with verified data labels.
 10. Provide a safe demo result when no active Gemini key exists.
@@ -123,9 +127,10 @@ Latest version passed:
   errors;
 - TypeScript check;
 - ESLint;
-- eight application tests, including the human-review gate, selectable Gemini
+- ten application tests, including the human-review gate, selectable Gemini
   model whitelist, layout-before-OCR enforcement, PDF page splitting, editable
-  regions, and the THCS illustration prompt.
+  regions, real crop previews, grade filtering, question details, exam
+  regeneration, and the THCS illustration prompt.
 
 The new self-hosted database has no active Gemini key yet. A key must be added
 again through Settings before a real Gemini request can be verified from the
@@ -164,3 +169,7 @@ Vietnam-hosted backend.
   cPanel application data/uploads, and verified the primary page, overview API,
   application bundle, PDF worker, page-upload route reference, and resize
   controls.
+- 2026-07-28 — v13 (not deployed): Replaced the static OCR crop with the real
+  selected source region, aligned overlays to natural image dimensions, passed
+  exact pixel dimensions to stricter Gemini layout mapping, added question
+  details and grade filtering, and added randomized exam regeneration.

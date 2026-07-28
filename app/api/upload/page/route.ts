@@ -11,6 +11,8 @@ export async function POST(request: Request) {
     const page = form.get("page");
     const pageNumber = Number(form.get("pageNumber"));
     const totalPages = Number(form.get("totalPages"));
+    const width = Number(form.get("width"));
+    const height = Number(form.get("height"));
 
     if (
       !documentId ||
@@ -21,7 +23,11 @@ export async function POST(request: Request) {
       pageNumber < 1 ||
       totalPages < 1 ||
       pageNumber > totalPages ||
-      totalPages > MAX_PAGE_COUNT
+      totalPages > MAX_PAGE_COUNT ||
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width < 1 ||
+      height < 1
     ) {
       return Response.json(
         { error: "Thông tin ảnh trang PDF không hợp lệ." },
@@ -56,6 +62,13 @@ export async function POST(request: Request) {
         totalPages: String(totalPages),
       },
     });
+    await requireFiles().put(
+      `${pageKey}.json`,
+      await new Blob([
+        JSON.stringify({ width, height }),
+      ]).arrayBuffer(),
+      { httpMetadata: { contentType: "application/json" } },
+    );
     await db
       .prepare("UPDATE documents SET page_count = ? WHERE id = ?")
       .bind(totalPages, documentId)
@@ -68,6 +81,8 @@ export async function POST(request: Request) {
           pageNumber,
           totalPages,
           mimeType: "image/png",
+          width,
+          height,
         },
       },
       { status: 201 },

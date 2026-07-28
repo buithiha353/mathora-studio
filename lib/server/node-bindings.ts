@@ -1,4 +1,10 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import {
   DatabaseSync,
@@ -100,18 +106,8 @@ class LocalFiles implements R2Like {
   }
 
   async get(key: string) {
-    try {
-      return new LocalObject(this.resolveKey(key));
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        "code" in error &&
-        error.code === "ENOENT"
-      ) {
-        return null;
-      }
-      throw error;
-    }
+    const target = this.resolveKey(key);
+    return existsSync(target) ? new LocalObject(target) : null;
   }
 
   async delete(key: string) {
