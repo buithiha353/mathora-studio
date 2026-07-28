@@ -10,9 +10,10 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 11
-- Current code version: 12 (not yet deployed)
-- Sites deployed source: `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c`
+- Current deployed version: 12
+- Current code version: 12
+- Sites deployed source: `ab46892bc1249cd6fbd9293e1140c0b1a1521b69`
+- Sites saved version: 8
 
 ## Product rules
 
@@ -158,3 +159,8 @@ Vietnam-hosted backend.
 - 2026-07-28 — v11 cPanel deployment: Deployed the layout-first OCR workflow and per-key model selection to `minhkhue.one/thuviendethi`, preserved the existing key store and application data, removed the remaining user-facing project wording, and verified the page, overview API, all six static assets, model selector, and browser console.
 - 2026-07-28 — v11 Sites deployment: Published saved Sites version 7 from source `4365763176ef5ccfcad1d56b8d9a81cfa4f8e68c` to `mathora-studio.nhatha-drive10.chatgpt.site`.
 - 2026-07-28 — v12 (not deployed): Added client-side PDF-to-PNG page splitting with per-page Gemini layout/content processing, page-aware region persistence, and an interactive region editor with drag, eight resize handles, page navigation, and exact coordinate inputs.
+- 2026-07-28 — v12 deployment: Deployed the PDF page-splitting and
+  interactive region-editor release to both production targets, preserved
+  cPanel application data/uploads, and verified the primary page, overview API,
+  application bundle, PDF worker, page-upload route reference, and resize
+  controls.
