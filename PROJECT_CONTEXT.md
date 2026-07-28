@@ -10,8 +10,8 @@ Primary production: https://minhkhue.one/thuviendethi/
 Sites production: https://mathora-studio.nhatha-drive10.chatgpt.site
 GitHub: https://github.com/buithiha353/mathora-studio (private)
 
-- Current deployed version: 8
-- Current code version: 10 (not yet deployed)
+- Current deployed version: 10
+- Current code version: 10 (deployed)
 - Sites deployed source: `bce0439a3b6fe5710c3f0d08db4cab09fa540c81`
 
 ## Product rules
@@ -130,3 +130,4 @@ Vietnam-hosted backend.
 - 2026-07-28 — v8: Fixed Vinext App Router standalone asset routing under the cPanel `/thuviendethi` mount, normalized packaged static-cache paths across Windows/Linux, and redeployed the fully styled interface.
 - 2026-07-28 — v9 (not deployed): Added the authoritative THCS textbook illustration prompt, including strict 2D style, geometry, notation, color, layout, real-world simplification, print-quality, source-verification, and answer-hiding rules.
 - 2026-07-28 — v10 (not deployed): Added a corrected river-crossing few-shot example from the supplied reference, allowing restrained contextual aesthetics while explicitly keeping AC as the unknown boat path and preventing blind copying of AB's misplaced question mark.
+- 2026-07-28 — v10 deployment: Deployed the authoritative THCS illustration prompt and corrected river-crossing few-shot to the cPanel Node.js production app at `minhkhue.one/thuviendethi`; page, overview API, all six static assets, illustration workspace, and browser console checks passed.
